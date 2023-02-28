@@ -21,7 +21,7 @@
                 :disabled="sameToCurrent"
                 :variant="sameToCurrent ? 'disabled' : 'outline-info'"
                 :title="sameToCurrent ? 'Current History' : 'Switch to this history'"
-                @click="handlers.setCurrentHistory(source)">
+                @click="setCurrentHistory(source)">
                 {{ sameToCurrent ? "Current History" : "Switch to" }}
             </b-button>
             <b-button
@@ -37,7 +37,8 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapActions, mapState } from "pinia";
+import { useHistoryStore } from "@/stores/historyStore";
 import HistoryPanel from "components/History/CurrentHistory/HistoryPanel";
 import CollectionPanel from "components/History/CurrentCollection/CollectionPanel";
 
@@ -74,7 +75,7 @@ export default {
         };
     },
     computed: {
-        ...mapGetters({ getHistoryById: "history/getHistoryById" }),
+        ...mapState(useHistoryStore, ["getHistoryById"]),
         sameToCurrent() {
             return this.currentHistory.id === this.source.id;
         },
@@ -83,6 +84,7 @@ export default {
         },
     },
     methods: {
+        ...mapActions(useHistoryStore, ["setCurrentHistory"]),
         onViewCollection(collection) {
             this.selectedCollections = [...this.selectedCollections, collection];
         },

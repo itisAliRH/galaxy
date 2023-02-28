@@ -18,8 +18,6 @@ const props = withDefaults(
     defineProps<{
         histories: History[];
         currentHistory: History;
-        // todo: stricter typedef for handlers, when MultipleViewItem is refactored
-        handlers: { [handler: string]: Function };
         filter?: string;
     }>(),
     {
@@ -68,7 +66,7 @@ function addHistoriesToList(histories: History[]) {
                 :data-component="MultipleViewItem"
                 :data-sources="selectedHistories"
                 :direction="'horizontal'"
-                :extra-props="{ currentHistory, handlers, filter, removeHistoryFromList }"
+                :extra-props="{ currentHistory, filter, removeHistoryFromList }"
                 :item-style="{ width: '15rem' }"
                 item-class="d-flex mx-1 mt-1"
                 class="d-flex"
