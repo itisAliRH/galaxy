@@ -117,9 +117,9 @@
 </template>
 
 <script>
-import store from "store";
 import axios from "axios";
-
+import { mapActions } from "pinia";
+import { useHistoryStore } from "@/stores/historyStore";
 import { withPrefix } from "utils/redirect";
 import { BAlert, BButton, BModal, BRow } from "bootstrap-vue";
 
@@ -139,8 +139,9 @@ export default {
         };
     },
     methods: {
+        ...mapActions(useHistoryStore, ["setCurrentHistory"]),
         switchHistory: async function (historyId) {
-            await store.dispatch("history/setCurrentHistory", historyId);
+            await this.setCurrentHistory(historyId);
         },
         getBeaconHistories: function () {
             axios

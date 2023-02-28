@@ -6,6 +6,7 @@
  */
 
 import defaultStore from "store/index";
+import { useHistoryStore } from "stores/historyStore";
 import { useHistoryItemsStore } from "stores/history/historyItemsStore";
 import { urlData } from "utils/url";
 import { loadSet } from "utils/setCache";
@@ -38,6 +39,7 @@ function setVisibilityThrottle() {
 }
 
 export async function watchHistoryOnce(store) {
+    const historyStore = useHistoryStore();
     const historyItemsStore = useHistoryItemsStore();
     // "Reset" watchTimeout so we don't queue up watchHistory calls in rewatchHistory.
     watchTimeout = null;
@@ -74,7 +76,7 @@ export async function watchHistoryOnce(store) {
             console.debug(`Reached limit of monitored changes (limit=${limit}).`);
         }
         // pass changed items to attached stores
-        store.commit("history/setHistory", history);
+        historyStore.setHistory(history);
         store.commit("saveDatasets", { payload });
         historyItemsStore.saveHistoryItems(historyId, payload);
         store.commit("saveCollectionObjects", { payload });

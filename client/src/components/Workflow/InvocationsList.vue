@@ -81,11 +81,9 @@
 </template>
 
 <script>
-import { mapCacheActions } from "vuex-cache";
-import { mapGetters } from "vuex";
 import { mapActions, mapState } from "pinia";
+import { useHistoryStore } from "@/stores/historyStore";
 import { getAppRoot } from "onload/loadConfig";
-
 import { getGalaxyInstance } from "app";
 import { invocationsProvider } from "components/providers/InvocationsProvider";
 import WorkflowInvocationState from "components/WorkflowInvocationState/WorkflowInvocationState";
@@ -134,7 +132,7 @@ export default {
             "getWorkflowByInstanceId",
             "getStoredWorkflowIdByInstanceId",
         ]),
-        ...mapGetters("history", ["getHistoryById", "getHistoryNameById"]),
+        ...mapState(useHistoryStore, ["getHistoryById", "getHistoryNameById"]),
         title() {
             let title = `Workflow Invocations`;
             if (this.storedWorkflowName) {
@@ -169,7 +167,7 @@ export default {
     },
     methods: {
         ...mapActions(useWorkflowStore, ["fetchWorkflowForInstanceId"]),
-        ...mapCacheActions("history", ["loadHistoryById"]),
+        ...mapActions(useHistoryStore, ["loadHistoryById"]),
         async provider(ctx) {
             ctx.root = this.root;
             const extraParams = this.ownerGrid ? {} : { include_terminal: false };
