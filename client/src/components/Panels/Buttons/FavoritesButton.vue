@@ -14,7 +14,8 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "pinia";
+import { useUserStore } from "@/stores/userStore";
 
 export default {
     name: "FavoritesButton",
@@ -30,7 +31,7 @@ export default {
         };
     },
     computed: {
-        ...mapGetters("user", ["currentUser"]),
+        ...mapGetters(useUserStore, ["currentUser"]),
 
         tooltipText() {
             if (this.currentUser.isAnonymous) {

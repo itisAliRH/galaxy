@@ -1,4 +1,6 @@
 <script setup>
+import { computed, ref, watch } from "vue";
+import { useUserStore } from "@/stores/userStore";
 import FormMessage from "components/Form/FormMessage";
 import ToolFavoriteButton from "components/Tool/Buttons/ToolFavoriteButton.vue";
 import ToolVersionsButton from "components/Tool/Buttons/ToolVersionsButton.vue";
@@ -9,9 +11,6 @@ import Heading from "components/Common/Heading";
 import ToolSelectPreferredObjectStore from "./ToolSelectPreferredObjectStore";
 import ToolTargetPreferredObjectStorePopover from "./ToolTargetPreferredObjectStorePopover";
 import { getAppRoot } from "onload/loadConfig";
-
-import { computed, ref, watch } from "vue";
-import { useCurrentUser } from "composables/user";
 
 const props = defineProps({
     id: {
@@ -77,8 +76,10 @@ function onSetError(e) {
     errorText.value = e;
 }
 
-const { currentUser: user } = useCurrentUser(false, true);
-const hasUser = computed(() => !user.value.isAnonymous);
+const { isAnonymous } = useUserStore();
+
+const hasUser = computed(() => !isAnonymous);
+
 const versions = computed(() => props.options.versions);
 const showVersions = computed(() => props.options.versions?.length > 1);
 

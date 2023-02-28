@@ -169,10 +169,11 @@
 </template>
 
 <script>
+import { mapGetters } from "pinia";
+import { useUserStore } from "@/stores/userStore";
 import { legacyNavigationMixin } from "components/plugins/legacyNavigation";
 import CopyModal from "components/History/Modals/CopyModal";
 import SelectorModal from "components/History/Modals/SelectorModal";
-import { mapGetters } from "vuex";
 
 export default {
     components: {
@@ -187,7 +188,7 @@ export default {
         historiesLoading: { type: Boolean, default: false },
     },
     computed: {
-        ...mapGetters("user", ["currentUser"]),
+        ...mapGetters(useUserStore, ["currentUser"]),
     },
     methods: {
         userTitle(title) {

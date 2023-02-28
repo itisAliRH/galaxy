@@ -71,7 +71,7 @@ export default {
         },
     },
     methods: {
-      ...mapActions(useUserStore, ["loadUser"]),
+        ...mapActions(useUserStore, ["loadUser"]),
         getTotalDiskUsage(user) {
             return bytesToString(user.total_disk_usage, true);
         },

@@ -67,7 +67,8 @@
 </template>
 
 <script>
-import { mapGetters } from "vuex";
+import { mapGetters } from "pinia";
+import { useUserStore } from "@/stores/userStore";
 import short from "components/directives/v-short";
 import StatelessTags from "components/TagsMultiselect/StatelessTags";
 
@@ -93,7 +94,7 @@ export default {
         };
     },
     computed: {
-        ...mapGetters("user", ["currentUser"]),
+        ...mapGetters(useUserStore, ["currentUser"]),
         editButtonTitle() {
             if (this.currentUser?.isAnonymous) {
                 return this.l("Log in to Rename History");
