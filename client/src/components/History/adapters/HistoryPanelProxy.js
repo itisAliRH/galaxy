@@ -3,7 +3,7 @@
  * history provided the same interface for other components.
  */
 import Backbone from "backbone";
-import store from "store";
+import { useHistoryStore } from "stores/historyStore";
 import { useHistoryItemsStore } from "stores/history/historyItemsStore";
 import { buildCollectionModal } from "./buildCollectionModal";
 import { createDatasetCollection } from "components/History/model/queries";
@@ -23,14 +23,12 @@ export class HistoryPanelProxy {
             },
         };
 
-        // watch the store, update history id
-        store.watch(
-            (state, getters) => getters["history/currentHistory"],
-            (history) => {
-                this.model.id = history.id;
-                this.model.set("name", history.name);
-            }
-        );
+        this.historyStore = useHistoryStore();
+
+        this.historyStore.$subscribe((mutation, state) => {
+            this.model.id = state.currentHistory.id;
+            this.model.set("name", state.currentHistory.name);
+        });
 
         // start watching the history with continuous queries
         watchHistory();
@@ -40,11 +38,11 @@ export class HistoryPanelProxy {
         // with History Panel Backbone View.
     }
     loadCurrentHistory() {
-        store.dispatch("history/loadCurrentHistory");
+        this.historyStore.loadCurrentHistory();
     }
     switchToHistory(historyId) {
         this.model.id = historyId;
-        store.dispatch("history/setCurrentHistory", historyId);
+        this.historyStore.setCurrentHistory(historyId);
     }
     async buildCollection(collectionType, selection, historyId = null, fromRulesInput = false) {
         let selectionContent = null;
