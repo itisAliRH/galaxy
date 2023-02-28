@@ -123,19 +123,19 @@
                                 getMessage(row.item).length > maxDescriptionLength &&
                                 !expandedMessage.includes(row.item.id)
                             ">
-                                <!-- eslint-disable vue/no-v-html -->
+                            <!-- eslint-disable vue/no-v-html -->
                             <span
                                 class="shrinked-description"
                                 :title="getMessage(row.item)"
                                 v-html="linkify(sanitize(getMessage(row.item).substring(0, maxDescriptionLength)))">
                             </span>
-                                <!-- eslint-enable vue/no-v-html -->
+                            <!-- eslint-enable vue/no-v-html -->
                             <span :title="getMessage(row.item)"> ...</span>
                             <a class="more-text-btn" href="javascript:void(0)" @click="expandMessage(row.item)"
                                 >(more)</a
                             >
                         </div>
-                            <!-- eslint-disable-next-line vue/no-v-html -->
+                        <!-- eslint-disable-next-line vue/no-v-html -->
                         <div v-else v-html="linkify(sanitize(getMessage(row.item)))"></div>
                     </div>
                 </div>
