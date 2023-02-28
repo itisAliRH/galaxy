@@ -4,13 +4,13 @@ import UploadModalContent from "./UploadModalContent";
 import { ref, watch } from "vue";
 import { getAppRoot } from "onload";
 
-import { useCurrentUser } from "composables/user";
-import { useUserHistories } from "composables/userHistories";
 import { useConfig } from "composables/config";
 import { wait } from "@/utils/utils";
+import { useUserStore } from "@/stores/userStore";
+import { useHistoryStore } from "@/stores/historyStore";
 
-const { currentUser } = useCurrentUser();
-const { currentHistoryId } = useUserHistories(currentUser);
+const { currentUser } = useUserStore();
+const { currentHistoryId } = useHistoryStore();
 
 const { config, isLoaded } = useConfig();
 

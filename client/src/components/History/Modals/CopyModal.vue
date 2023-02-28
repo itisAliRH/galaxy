@@ -45,7 +45,9 @@
 </template>
 
 <script>
-import { mapActions, mapGetters } from "vuex";
+import { mapActions, mapGetters } from "pinia";
+import { useUserStore } from "@/stores/userStore";
+import { useHistoryStore } from "@/stores/historyStore";
 
 export default {
     props: {
@@ -59,7 +61,7 @@ export default {
         };
     },
     computed: {
-        ...mapGetters("user", ["currentUser"]),
+        ...mapGetters(useUserStore, ["currentUser"]),
 
         title() {
             return `Copying History: ${this.history.name}`;
@@ -89,7 +91,7 @@ export default {
         },
     },
     methods: {
-        ...mapActions("history", ["copyHistory"]),
+        ...mapActions(useHistoryStore, ["copyHistory"]),
 
         async copy(close) {
             this.loading = true;
