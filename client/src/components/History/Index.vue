@@ -1,13 +1,13 @@
 <template>
-    <CurrentUser v-slot="{ user }" class="d-flex flex-column">
-        <UserHistories v-if="user" v-slot="{ currentHistory, histories, handlers, historiesLoading }" :user="user">
+    <div class="d-flex flex-column">
+        <div v-if="currentUser">
             <div v-if="currentHistory" id="current-history-panel" class="history-index">
                 <CurrentHistory
                     v-if="!breadcrumbs.length"
                     :list-offset="listOffset"
                     :history="currentHistory"
                     :filterable="true"
-                    v-on="handlers"
+                    v-on="{ updateHistory: updateHistory }"
                     @view-collection="onViewCollection">
                     <template v-slot:navigation>
                         <HistoryNavigation
@@ -15,7 +15,7 @@
                             :histories="histories"
                             :histories-loading="historiesLoading"
                             title="Histories"
-                            v-on="handlers" />
+                            v-on="{ updateHistory: updateHistory }" />
                     </template>
                 </CurrentHistory>
                 <CurrentCollection
@@ -30,23 +30,22 @@
             <div v-else class="flex-grow-1 loadingBackground h-100">
                 <span v-localize class="sr-only">Loading History...</span>
             </div>
-        </UserHistories>
-    </CurrentUser>
+        </div>
+    </div>
 </template>
 
 <script>
-import CurrentUser from "components/providers/CurrentUser";
-import UserHistories from "components/providers/UserHistories";
+import { mapAction, mapState } from "pinia";
+import { useUserStore } from "@/stores/userStore";
+import { useHistoryStore } from "@/stores/historyStore";
 import HistoryNavigation from "./CurrentHistory/HistoryNavigation";
 import CurrentHistory from "./CurrentHistory/HistoryPanel";
 import CurrentCollection from "./CurrentCollection/CollectionPanel";
 
 export default {
     components: {
-        CurrentUser,
         CurrentHistory,
         CurrentCollection,
-        UserHistories,
         HistoryNavigation,
     },
     data() {
@@ -56,7 +55,12 @@ export default {
             listOffset: 0,
         };
     },
+    computed: {
+        ...mapState(useUserStore, ["currentUser"]),
+        ...mapState(useHistoryStore, ["currentHistory", "histories", "historiesLoading"]),
+    },
     methods: {
+        ...mapAction(useHistoryStore, ["updateHistory"]),
         onViewCollection(collection, currentOffset) {
             this.listOffset = currentOffset;
             this.breadcrumbs = [...this.breadcrumbs, collection];
