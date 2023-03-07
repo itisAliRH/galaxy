@@ -1,41 +1,34 @@
 <template>
-    <div v-if="currentUser">
-        <div v-if="history" class="d-flex flex-column h-100">
-            <b-alert v-if="history.purged" variant="info" show>This history has been purged.</b-alert>
-            <div v-else class="flex-row flex-grow-0">
-                <b-button
-                    v-if="user.id == history.user_id"
-                    size="sm"
-                    variant="outline-info"
-                    title="Switch to this history"
-                    :disabled="currentHistory.id == history.id"
-                    @click="setCurrentHistory(history)">
-                    Switch to this history
-                </b-button>
-                <b-button
-                    v-else
-                    v-b-modal:copy-history-modal
-                    size="sm"
-                    variant="outline-info"
-                    title="Import this history">
-                    Import this history
-                </b-button>
-            </div>
-            <CollectionPanel
-                v-if="selectedCollections.length && selectedCollections[0].history_id == id"
-                :history="history"
-                :selected-collections.sync="selectedCollections"
-                :show-controls="false"
-                @view-collection="onViewCollection" />
-            <HistoryPanel
-                v-else
-                :history="history"
-                :writable="user.id == history.user_id"
-                :show-controls="false"
-                v-on="{ 'update-history': updateHistory }"
-                @view-collection="onViewCollection" />
-            <CopyModal id="copy-history-modal" :history="history" />
+    <div v-if="currentUser && history" class="d-flex flex-column h-100">
+        <b-alert v-if="history.purged" variant="info" show>This history has been purged.</b-alert>
+        <div v-else class="flex-row flex-grow-0">
+            <b-button
+                v-if="currentUser.id == history.user_id"
+                size="sm"
+                variant="outline-info"
+                title="Switch to this history"
+                :disabled="currentHistory.id == history.id"
+                @click="setCurrentHistory(history)">
+                Switch to this history
+            </b-button>
+            <b-button v-else v-b-modal:copy-history-modal size="sm" variant="outline-info" title="Import this history">
+                Import this history
+            </b-button>
         </div>
+        <CollectionPanel
+            v-if="selectedCollections.length && selectedCollections[0].history_id == id"
+            :history="history"
+            :selected-collections.sync="selectedCollections"
+            :show-controls="false"
+            @view-collection="onViewCollection" />
+        <HistoryPanel
+            v-else
+            :history="history"
+            :writable="currentUser.id == history.user_id"
+            :show-controls="false"
+            v-on="{ 'update-history': updateHistory }"
+            @view-collection="onViewCollection" />
+        <CopyModal id="copy-history-modal" :history="history" />
     </div>
 </template>
 

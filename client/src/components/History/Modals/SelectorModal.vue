@@ -42,6 +42,8 @@
 </template>
 
 <script>
+import { mapState } from "pinia";
+import { useHistoryStore } from "@/stores/historyStore";
 import { BModal, BFormGroup, BFormInput, BTable, BPagination } from "bootstrap-vue";
 import { StatelessTags } from "components/Tags";
 import UtcDate from "components/UtcDate";
@@ -59,7 +61,6 @@ export default {
     props: {
         multiple: { type: Boolean, default: false },
         title: { type: String, default: "Switch to history" },
-        currentHistoryId: { type: String, required: true },
         histories: { type: Array, default: () => [] },
         perPage: { type: Number, required: false, default: 50 },
     },
@@ -74,6 +75,7 @@ export default {
         };
     },
     computed: {
+        ...mapState(useHistoryStore, ["currentHistoryId"]),
         isEmptySelection() {
             return this.selectedHistories.length === 0;
         },

@@ -26,8 +26,8 @@ export class HistoryPanelProxy {
         this.historyStore = useHistoryStore();
 
         this.historyStore.$subscribe((mutation, state) => {
-            this.model.id = state.currentHistory.id;
-            this.model.set("name", state.currentHistory.name);
+            this.model.id = state?.currentHistory?.id;
+            this.model.set("name", state?.currentHistory?.name);
         });
 
         // start watching the history with continuous queries
