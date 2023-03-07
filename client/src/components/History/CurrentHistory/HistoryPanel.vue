@@ -33,10 +33,7 @@
                     :filter-text.sync="filterText"
                     :show-advanced.sync="showAdvanced" />
                 <section v-if="!showAdvanced">
-                    <HistoryDetails
-                        :history="history"
-                        :writeable="writable"
-                        @update:history="$emit('updateHistory', $event)" />
+                    <HistoryDetails :history="history" :writeable="writable" @update:history="updateHistory($event)" />
                     <HistoryMessages :history="history" />
                     <HistoryCounter
                         :history="history"
@@ -274,7 +271,7 @@ export default {
         await this.loadHistoryItems();
     },
     methods: {
-        ...mapActions(useHistoryStore, ["loadHistoryById"]),
+        ...mapActions(useHistoryStore, ["loadHistoryById", "updateHistory"]),
         ...mapActions(useHistoryItemsStore, ["fetchHistoryItems"]),
         getHighlight(item) {
             if (this.filterText.includes("related:" + item.hid)) {
