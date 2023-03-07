@@ -7,13 +7,12 @@ import {
     setCurrentThemeQuery,
 } from "@/stores/users/queries";
 
-// TODO: Add all user fields
 interface User {
     id: string;
     email: string;
+    tags_used: string[];
 }
 
-// TODO: Add all preferences fields
 interface Preferences {
     theme: string;
     favorites: { tools: string[] };
@@ -25,8 +24,6 @@ interface State {
 }
 
 let loadPromise: Promise<void> | null = null;
-
-const historyStore = useHistoryStore();
 
 export const useUserStore = defineStore("userStore", {
     state: (): State => ({
@@ -53,7 +50,8 @@ export const useUserStore = defineStore("userStore", {
             if (!loadPromise) {
                 loadPromise = getCurrentUser()
                     .then((user) => {
-                        this.currentUser = user;
+                        const historyStore = useHistoryStore();
+                        this.currentUser = { ...user, isAnonymous: !user.email };
                         this.currentPreferences = user?.preferences ?? null;
                         historyStore.loadCurrentHistory();
                         historyStore.loadHistories();
