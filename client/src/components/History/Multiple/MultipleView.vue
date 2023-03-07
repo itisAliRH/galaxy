@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { storeToRefs } from "pinia";
 import { useUserStore } from "@/stores/userStore";
 import { useHistoryStore } from "@/stores/historyStore";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -11,8 +12,8 @@ import MultipleViewList from "./MultipleViewList.vue";
 
 const filter = ref("");
 
-const { currentUser } = useUserStore();
-const { histories, historiesLoading, currentHistory } = useHistoryStore();
+const { currentUser } = storeToRefs(useUserStore());
+const { histories, historiesLoading, currentHistory } = storeToRefs(useHistoryStore());
 
 //@ts-ignore bad library types
 library.add(faTimes);

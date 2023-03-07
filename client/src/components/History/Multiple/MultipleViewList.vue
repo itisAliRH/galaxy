@@ -17,7 +17,6 @@ interface History {
 const props = withDefaults(
     defineProps<{
         histories: History[];
-        currentHistory: History;
         filter?: string;
     }>(),
     {
@@ -37,10 +36,6 @@ const scrolledLeft = computed(() => !isScrollable.value || arrived.left);
 const scrolledRight = computed(() => !isScrollable.value || arrived.right);
 
 const selectedHistories: Ref<History[]> = computed(() => historyStore.pinnedHistories);
-
-function removeHistoryFromList(history: History) {
-    historyStore.unpinHistory(history.id);
-}
 
 if (!selectedHistories.value.length ?? props.histories.length > 0) {
     historyStore.pinHistory(props.histories[0]!.id);
@@ -66,7 +61,7 @@ function addHistoriesToList(histories: History[]) {
                 :data-component="MultipleViewItem"
                 :data-sources="selectedHistories"
                 :direction="'horizontal'"
-                :extra-props="{ currentHistory, filter, removeHistoryFromList }"
+                :extra-props="{ filter }"
                 :item-style="{ width: '15rem' }"
                 item-class="d-flex mx-1 mt-1"
                 class="d-flex"
@@ -83,7 +78,6 @@ function addHistoriesToList(histories: History[]) {
                 id="select-histories-modal"
                 :multiple="true"
                 :histories="histories"
-                :current-history-id="currentHistory.id"
                 title="Select histories"
                 @selectHistories="addHistoriesToList" />
         </div>
