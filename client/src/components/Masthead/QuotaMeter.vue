@@ -31,7 +31,7 @@ export default {
     },
     computed: {
         ...mapGetters("config", ["config"]),
-        ...mapState(useUserStore, ["currentUser"]),
+        ...mapState(useUserStore, ["currentUser", "isAnonymous"]),
         hasQuota() {
             const quotasEnabled = this.config?.enable_quotas ?? false;
             const quotaLimited = this.currentUser?.quota !== "unlimited" ?? false;
@@ -51,7 +51,7 @@ export default {
         },
         title() {
             let details = "";
-            if (this.currentUser.isAnonymous) {
+            if (this.isAnonymous) {
                 details = this.l("Log in for details.");
             } else {
                 details = this.l("Click for details.");

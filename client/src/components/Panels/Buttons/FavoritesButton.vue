@@ -5,7 +5,7 @@
         size="sm"
         variant="link"
         aria-label="Show favorite tools"
-        :disabled="currentUser.isAnonymous"
+        :disabled="isAnonymous"
         :title="tooltipText"
         @click="onFavorites">
         <icon v-if="toggle" :icon="['fas', 'star']" />
@@ -31,10 +31,10 @@ export default {
         };
     },
     computed: {
-        ...mapGetters(useUserStore, ["currentUser"]),
+        ...mapGetters(useUserStore, ["isAnonymous"]),
 
         tooltipText() {
-            if (this.currentUser.isAnonymous) {
+            if (this.isAnonymous) {
                 return this.l("Log in to Favorite Tools");
             } else {
                 if (this.toggle) {
