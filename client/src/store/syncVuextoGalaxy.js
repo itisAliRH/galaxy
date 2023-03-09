@@ -10,7 +10,7 @@ import { getGalaxyInstance } from "app";
 import { waitForInit } from "utils/observable";
 
 // store subscriptions
-import { syncUserToGalaxy } from "store/userStore";
+// import { syncUserToGalaxy } from "stores/users/syncUserToGalaxy";
 import { syncConfigToGalaxy } from "store/configStore";
 
 export const syncVuextoGalaxy = (store) => {
@@ -19,7 +19,7 @@ export const syncVuextoGalaxy = (store) => {
     });
 
     // sets current user when glaaxy changes
-    syncUserToGalaxy(globalGalaxy$, store);
+    // syncUserToGalaxy(globalGalaxy$, store);
 
     // configuration
     syncConfigToGalaxy(globalGalaxy$, store);
