@@ -88,13 +88,11 @@
             </UserBeaconSettings>
         </ConfigProvider>
         <ConfigProvider v-slot="{ config }">
-            <CurrentUser v-slot="{ user }">
-                <UserPreferredObjectStore
-                    v-if="config && config.object_store_allows_id_selection"
-                    :preferred-object-store-id="user.preferred_object_store_id"
-                    :user-id="userId">
-                </UserPreferredObjectStore>
-            </CurrentUser>
+            <UserPreferredObjectStore
+                v-if="config && config.object_store_allows_id_selection"
+                :preferred-object-store-id="currentUser.preferred_object_store_id"
+                :user-id="userId">
+            </UserPreferredObjectStore>
         </ConfigProvider>
         <ConfigProvider v-slot="{ config }">
             <UserDeletion
@@ -115,6 +113,7 @@
 
 <script>
 import Vue from "vue";
+import { mapState } from "pinia";
 import BootstrapVue from "bootstrap-vue";
 import ThemeSelector from "./ThemeSelector.vue";
 import { getGalaxyInstance } from "app";
@@ -124,7 +123,6 @@ import axios from "axios";
 import QueryStringParsing from "utils/query-string-parsing";
 import { getUserPreferencesModel } from "components/User/UserPreferencesModel";
 import ConfigProvider from "components/providers/ConfigProvider";
-import CurrentUser from "components/providers/CurrentUser";
 import { userLogoutAll } from "utils/logout";
 import UserDeletion from "./UserDeletion";
 import UserPreferencesElement from "./UserPreferencesElement";
@@ -132,6 +130,7 @@ import UserPreferredObjectStore from "./UserPreferredObjectStore";
 
 import "@fortawesome/fontawesome-svg-core";
 import UserBeaconSettings from "./UserBeaconSettings";
+import { useUserStore } from "@/stores/userStore";
 
 Vue.use(BootstrapVue);
 
@@ -142,7 +141,6 @@ export default {
         UserPreferencesElement,
         ThemeSelector,
         UserBeaconSettings,
-        CurrentUser,
         UserPreferredObjectStore,
     },
     props: {
@@ -166,6 +164,7 @@ export default {
         };
     },
     computed: {
+        ...mapState(useUserStore, ["currentUser"]),
         activePreferences() {
             const enabledPreferences = Object.entries(getUserPreferencesModel()).filter((f) => !f.disabled);
             return Object.fromEntries(enabledPreferences);
