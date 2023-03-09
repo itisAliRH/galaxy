@@ -6,7 +6,6 @@ import FormTool from "./FormTool";
 import MockCurrentUser from "components/providers/MockCurrentUser";
 import MockConfigProvider from "components/providers/MockConfigProvider";
 import Vuex from "vuex";
-import { userStore } from "store/userStore";
 import { configStore } from "store/configStore";
 import { createTestingPinia } from "@pinia/testing";
 
@@ -19,7 +18,6 @@ describe("FormTool", () => {
     function mountTarget() {
         const store = new Vuex.Store({
             modules: {
-                user: mockModule(userStore),
                 config: mockModule(configStore),
             },
         });
