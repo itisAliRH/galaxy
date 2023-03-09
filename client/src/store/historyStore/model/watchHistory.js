@@ -10,7 +10,7 @@ import { useHistoryStore } from "stores/historyStore";
 import { useHistoryItemsStore } from "stores/history/historyItemsStore";
 import { urlData } from "utils/url";
 import { loadSet } from "utils/setCache";
-import { getCurrentHistoryFromServer } from "./queries";
+import { getCurrentHistoryFromServer } from "stores/services/history.services";
 import { getGalaxyInstance } from "app";
 
 const limit = 1000;
