@@ -1,7 +1,9 @@
+import { createPinia } from "pinia";
 import { mount } from "@vue/test-utils";
 import flushPromises from "flush-promises";
-import { getLocalVue } from "tests/jest/helpers";
 import SelectorModal from "./SelectorModal";
+import { getLocalVue } from "tests/jest/helpers";
+import { useHistoryStore } from "stores/historyStore";
 
 const localVue = getLocalVue();
 
@@ -31,12 +33,18 @@ const CURRENT_HISTORY_INDICATION_TEXT = "(Current)";
 
 describe("History SelectorModal.vue", () => {
     let wrapper;
+    let historyStore;
 
     async function mountWith(props) {
+        const pinia = createPinia();
         wrapper = mount(SelectorModal, {
             propsData: props,
             localVue,
+            pinia,
         });
+        historyStore = useHistoryStore();
+        historyStore.setHistories(props.histories);
+        historyStore.setCurrentHistoryId(props.currentHistoryId);
         await flushPromises();
     }
 
@@ -89,8 +97,6 @@ describe("History SelectorModal.vue", () => {
             await button.trigger("click");
 
             expect(wrapper.emitted()["selectHistories"][0][0][0].id).toBe(targetHistoryId1);
-
-            console.debug(wrapper.html());
         });
     });
 });
