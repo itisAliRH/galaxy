@@ -25,7 +25,7 @@ function onViewCollection(collection: object, currentOffset: number) {
 </script>
 
 <template>
-    <div v-if="currentUser?.id && currentHistory" id="current-history-panel" class="history-index d-flex flex-column">
+    <div v-if="currentUser && currentHistory" id="current-history-panel" class="history-index d-flex flex-column">
         <CurrentHistory
             v-if="!breadcrumbs.length"
             :list-offset="listOffset"

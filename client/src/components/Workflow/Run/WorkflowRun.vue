@@ -47,7 +47,6 @@
 <script>
 import { useHistoryItemsStore } from "stores/history/historyItemsStore";
 import { mapState } from "pinia";
-import { mapGetters } from "vuex";
 import { getRunData } from "./services";
 import LoadingSpan from "components/LoadingSpan";
 import WorkflowRunSuccess from "./WorkflowRunSuccess";
@@ -55,6 +54,7 @@ import WorkflowRunForm from "./WorkflowRunForm";
 import WorkflowRunFormSimple from "./WorkflowRunFormSimple";
 import { WorkflowRunModel } from "./model";
 import { errorMessageAsString } from "utils/simple-error";
+import { useHistoryStore } from "@/stores/historyStore";
 
 export default {
     components: {
@@ -95,8 +95,8 @@ export default {
         };
     },
     computed: {
+        ...mapState(useHistoryStore, ["currentHistoryId"]),
         ...mapState(useHistoryItemsStore, ["getLastUpdateTime"]),
-        ...mapGetters("history", ["currentHistoryId"]),
         historyStatusKey() {
             return `${this.currentHistoryId}_${this.getLastUpdateTime}`;
         },
