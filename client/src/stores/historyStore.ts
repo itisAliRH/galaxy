@@ -1,3 +1,4 @@
+import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 import { sortByObjectProp } from "@/utils/sorting";
 import {
@@ -5,7 +6,7 @@ import {
     createAndSelectNewHistory,
     deleteHistoryById,
     getCurrentHistoryFromServer,
-    getHistoryById,
+    getHistoryByIdFromServer,
     getHistoryList,
     secureHistoryOnServer,
     setCurrentHistoryOnServer,
@@ -18,78 +19,74 @@ export interface History {
     name: string;
 }
 
-interface State {
-    storedHistories: { [key: string]: History };
-    pinnedHistories: { id: string }[];
-    storedCurrentHistoryId: string | null;
-    historiesLoading: boolean;
-}
-
 const isLoadingHistory = new Set();
 
-export const useHistoryStore = defineStore("historyStore", {
-    state: (): State => ({
-        storedHistories: {},
-        pinnedHistories: [],
-        storedCurrentHistoryId: null,
-        historiesLoading: false,
-    }),
-    getters: {
-        histories(state) {
-            return Object.values(state.storedHistories).sort(sortByObjectProp("name"));
-        },
-        firstHistory(state) {
-            return state.storedHistories[0] ?? null;
-        },
-        getFirstHistoryId(state) {
-            return state.storedHistories[0]?.id ?? null;
-        },
-        currentHistory(state) {
-            if (state.storedCurrentHistoryId !== null) {
-                return state.storedHistories[state.storedCurrentHistoryId];
+export const useHistoryStore = defineStore(
+    "historyStore",
+    () => {
+        const historiesLoading = ref(false);
+        const pinnedHistories = ref<{ id: string }[]>([]);
+        const storedCurrentHistoryId = ref<string | null>(null);
+        const storedHistories = ref<{ [key: string]: History }>({});
+
+        const histories = computed(() => {
+            return Object.values(storedHistories.value).sort(sortByObjectProp("name"));
+        });
+
+        const getFirstHistoryId = computed(() => {
+            return storedHistories.value[0]?.id ?? null;
+        });
+
+        const currentHistory = computed(() => {
+            if (storedCurrentHistoryId.value !== null) {
+                return storedHistories.value[storedCurrentHistoryId.value];
             }
             return null;
-        },
-        currentHistoryId(state): string | null {
-            const { storedHistories, storedCurrentHistoryId } = state;
-            if (storedCurrentHistoryId === null || !(storedCurrentHistoryId in storedHistories)) {
-                return this.getFirstHistoryId;
+        });
+
+        const currentHistoryId = computed(() => {
+            if (storedCurrentHistoryId.value === null || !(storedCurrentHistoryId.value in storedHistories.value)) {
+                return getFirstHistoryId.value;
             } else {
-                return storedCurrentHistoryId;
+                return storedCurrentHistoryId.value;
             }
-        },
-        getHistoryById(state) {
+        });
+
+        const getHistoryById = computed(() => {
             return (historyId: string) => {
-                return state.storedHistories[historyId] ?? null;
+                return storedHistories.value[historyId] ?? null;
             };
-        },
-        getHistoryNameById(state) {
+        });
+
+        const getHistoryNameById = computed(() => {
             return (historyId: string) => {
-                const history = state.storedHistories[historyId];
+                const history = storedHistories.value[historyId];
                 if (history) {
                     return history.name;
                 } else {
                     return "...";
                 }
             };
-        },
-    },
-    actions: {
-        async setCurrentHistory(historyId: string) {
+        });
+
+        async function setCurrentHistory(historyId: string) {
             const currentHistory = await setCurrentHistoryOnServer(historyId);
-            this.selectHistory(currentHistory as History);
-        },
-        setCurrentHistoryId(historyId: string) {
-            this.storedCurrentHistoryId = historyId;
-        },
-        setHistory(history: History) {
-            this.storedHistories[history.id] = history;
-        },
-        setHistories(histories: History[]) {
+            selectHistory(currentHistory as History);
+        }
+
+        function setCurrentHistoryId(historyId: string) {
+            storedCurrentHistoryId.value = historyId;
+        }
+
+        function setHistory(history: History) {
+            storedHistories.value[history.id] = history;
+        }
+
+        function setHistories(histories: History[]) {
             // The incoming history list may contain less information than the already stored
             // histories, so we ensure that already available details are not getting lost.
             const enrichedHistories = histories.map((history) => {
-                const historyState = this.storedHistories[history.id] || {};
+                const historyState = storedHistories.value[history.id] || {};
                 return Object.assign({}, historyState, history);
             });
             // Histories are provided as list but stored as map.
@@ -98,81 +95,120 @@ export const useHistoryStore = defineStore("historyStore", {
             };
             // Ensure that already stored histories, which are not available in the incoming array,
             // are not lost. This happens e.g. with shared histories since they have different owners.
-            Object.values(this.storedHistories).forEach((history) => {
+            Object.values(storedHistories.value).forEach((history) => {
                 const historyId = history.id;
                 if (!newMap[historyId]) {
                     newMap[historyId] = history;
                 }
             });
             // Update stored histories
-            this.storedHistories = newMap;
-        },
-        setHistoriesLoading(loading: boolean) {
-            this.historiesLoading = loading;
-        },
-        pinHistory(historyId: string) {
-            this.pinnedHistories.push({ id: historyId });
-        },
-        unpinHistory(historyId: string) {
-            this.pinnedHistories = this.pinnedHistories.filter((h) => h.id !== historyId);
-        },
-        selectHistory(history: History) {
-            this.setHistory(history);
-            this.setCurrentHistoryId(history.id);
-        },
-        async copyHistory(history: History, name: string, copyAll: boolean) {
+            storedHistories.value = newMap;
+        }
+
+        function setHistoriesLoading(loading: boolean) {
+            historiesLoading.value = loading;
+        }
+
+        function pinHistory(historyId: string) {
+            pinnedHistories.value.push({ id: historyId });
+        }
+
+        function unpinHistory(historyId: string) {
+            pinnedHistories.value = pinnedHistories.value.filter((h) => h.id !== historyId);
+        }
+
+        function selectHistory(history: History) {
+            setHistory(history);
+            setCurrentHistoryId(history.id);
+        }
+
+        async function copyHistory(history: History, name: string, copyAll: boolean) {
             const newHistory = await cloneHistory(history, name, copyAll);
-            this.selectHistory(newHistory as History);
-        },
-        async createNewHistory() {
+            selectHistory(newHistory as History);
+        }
+
+        async function createNewHistory() {
             const newHistory = await createAndSelectNewHistory();
-            return this.selectHistory(newHistory as History);
-        },
-        async deleteHistory(historyId: string, purge: boolean) {
+            return selectHistory(newHistory as History);
+        }
+
+        async function deleteHistory(historyId: string, purge: boolean) {
             const deletedHistory = (await deleteHistoryById(historyId, purge)) as History;
-            delete this.storedHistories[deletedHistory.id];
-            if (this.getFirstHistoryId) {
-                return this.setCurrentHistoryId(this.getFirstHistoryId);
+            delete storedHistories.value[deletedHistory.id];
+            if (getFirstHistoryId.value) {
+                return setCurrentHistoryId(getFirstHistoryId.value);
             } else {
-                return this.createNewHistory();
+                return createNewHistory();
             }
-        },
-        async loadCurrentHistory() {
+        }
+
+        async function loadCurrentHistory() {
             const history = await getCurrentHistoryFromServer();
-            this.selectHistory(history as History);
-        },
-        async loadHistories() {
-            if (!this.historiesLoading) {
-                this.setHistoriesLoading(true);
+            selectHistory(history as History);
+        }
+
+        async function loadHistories() {
+            if (!historiesLoading.value) {
+                setHistoriesLoading(true);
                 await getHistoryList()
-                    .then((histories) => this.setHistories(histories))
+                    .then((histories) => setHistories(histories))
                     .catch((error) => console.warn(error))
                     .finally(() => {
-                        this.setHistoriesLoading(false);
+                        setHistoriesLoading(false);
                     });
             }
-        },
-        async loadHistoryById(historyId: string) {
+        }
+
+        async function loadHistoryById(historyId: string) {
             if (!isLoadingHistory.has(historyId)) {
-                await getHistoryById(historyId)
-                    .then((history) => this.setHistory(history as History))
-                    .catch((error) => console.warn(error))
+                await getHistoryByIdFromServer(historyId)
+                    .then((history: any) => setHistory(history))
+                    .catch((error: any) => console.warn(error))
                     .finally(() => {
                         isLoadingHistory.delete(historyId);
                     });
                 isLoadingHistory.add(historyId);
             }
-        },
-        async secureHistory(history: History) {
+        }
+
+        async function secureHistory(history: History) {
             const securedHistory = await secureHistoryOnServer(history);
-            this.setHistory(securedHistory as History);
-        },
-        async updateHistory({ id, ...update }: History) {
+            setHistory(securedHistory as History);
+        }
+
+        async function updateHistory({ id, ...update }: History) {
             const savedHistory = await updateHistoryFields(id, update);
-            this.setHistory(savedHistory as History);
+            setHistory(savedHistory as History);
+        }
+
+        return {
+            histories,
+            currentHistory,
+            currentHistoryId,
+            pinnedHistories,
+            getHistoryById,
+            getHistoryNameById,
+            setCurrentHistory,
+            setCurrentHistoryId,
+            setHistory,
+            setHistories,
+            pinHistory,
+            unpinHistory,
+            selectHistory,
+            copyHistory,
+            createNewHistory,
+            deleteHistory,
+            loadCurrentHistory,
+            loadHistories,
+            loadHistoryById,
+            secureHistory,
+            updateHistory,
+            historiesLoading,
+        };
+    },
+    {
+        persist: {
+            paths: ["pinnedHistories"],
         },
-    },
-    persist: {
-        paths: ["pinnedHistories"],
-    },
-});
+    }
+);

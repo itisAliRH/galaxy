@@ -120,7 +120,7 @@ export async function getHistoryList() {
  * Load one history by id
  * @param {String} id
  */
-export async function getHistoryById(id) {
+export async function getHistoryByIdFromServer(id) {
     const path = `api/histories/${id}`;
     const response = await axios.get(prependPath(path), { params: extendedHistoryParams });
     return doResponse(response);
@@ -139,7 +139,7 @@ export async function secureHistoryOnServer(history) {
     if (response.status !== 200) {
         throw new Error(response.statusText);
     }
-    return await getHistoryById(id);
+    return await getHistoryByIdFromServer(id);
 }
 
 /**
