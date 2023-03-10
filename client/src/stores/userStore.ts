@@ -1,3 +1,4 @@
+import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 import { useHistoryStore } from "@/stores/historyStore";
 import {
@@ -18,70 +19,78 @@ interface Preferences {
     favorites: { tools: string[] };
 }
 
-interface State {
-    currentUser: User | null;
-    currentPreferences: Preferences | null;
-}
+export const useUserStore = defineStore("userStore", () => {
+    const currentUser = ref<User | null>(null);
+    const currentPreferences = ref<Preferences | null>(null);
 
-let loadPromise: Promise<void> | null = null;
+    let loadPromise: Promise<void> | null = null;
 
-export const useUserStore = defineStore("userStore", {
-    state: (): State => ({
-        currentUser: null,
-        currentPreferences: null,
-    }),
-    getters: {
-        isAnonymous(state) {
-            return !state.currentUser?.email;
-        },
-        currentTheme(state) {
-            return state.currentPreferences?.theme ?? null;
-        },
-        currentFavorites(state) {
-            if (state.currentPreferences?.favorites) {
-                return state.currentPreferences.favorites;
-            } else {
-                return { tools: [] };
-            }
-        },
-    },
-    actions: {
-        async loadUser() {
-            if (!loadPromise) {
-                loadPromise = getCurrentUser()
-                    .then((user) => {
-                        const historyStore = useHistoryStore();
-                        this.currentUser = { ...user, isAnonymous: !user.email };
-                        this.currentPreferences = user?.preferences ?? null;
-                        historyStore.loadCurrentHistory();
-                        historyStore.loadHistories();
-                    })
-                    .catch((e) => {
-                        console.error("Failed to load user", e);
-                    })
-                    .finally(() => {
-                        loadPromise = null;
-                    });
-            }
-        },
-        async setCurrentTheme(theme: string) {
-            const currentTheme = await setCurrentThemeQuery(this.currentUser!.id, theme);
-            if (this.currentPreferences) {
-                this.currentPreferences.theme = currentTheme;
-            }
-        },
-        async addFavoriteTool(toolId: string) {
-            const tools = await addFavoriteToolQuery(this.currentUser!.id, toolId);
-            this.setFavoriteTools(tools);
-        },
-        async removeFavoriteTool(toolId: string) {
-            const tools = await removeFavoriteToolQuery(this.currentUser!.id, toolId);
-            this.setFavoriteTools(tools);
-        },
-        setFavoriteTools(tools: string[]) {
-            if (this.currentPreferences) {
-                this.currentPreferences.favorites.tools = tools ?? { tools: [] };
-            }
-        },
-    },
+    const isAnonymous = computed(() => {
+        return !currentUser.value?.email;
+    });
+
+    const currentTheme = computed(() => {
+        return currentPreferences.value?.theme ?? null;
+    });
+
+    const currentFavorites = computed(() => {
+        if (currentPreferences.value?.favorites) {
+            return currentPreferences.value.favorites;
+        } else {
+            return { tools: [] };
+        }
+    });
+
+    function loadUser() {
+        if (!loadPromise) {
+            loadPromise = getCurrentUser()
+                .then((user) => {
+                    const historyStore = useHistoryStore();
+                    currentUser.value = { ...user, isAnonymous: !user.email };
+                    currentPreferences.value = user?.preferences ?? null;
+                    historyStore.loadCurrentHistory();
+                    historyStore.loadHistories();
+                })
+                .catch((e) => {
+                    console.error("Failed to load user", e);
+                })
+                .finally(() => {
+                    loadPromise = null;
+                });
+        }
+    }
+
+    async function setCurrentTheme(theme: string) {
+        const currentTheme = await setCurrentThemeQuery(currentUser.value!.id, theme);
+        if (currentPreferences.value) {
+            currentPreferences.value.theme = currentTheme;
+        }
+    }
+    async function addFavoriteTool(toolId: string) {
+        const tools = await addFavoriteToolQuery(currentUser.value!.id, toolId);
+        setFavoriteTools(tools);
+    }
+
+    async function removeFavoriteTool(toolId: string) {
+        const tools = await removeFavoriteToolQuery(currentUser.value!.id, toolId);
+        setFavoriteTools(tools);
+    }
+
+    function setFavoriteTools(tools: string[]) {
+        if (currentPreferences.value) {
+            currentPreferences.value.favorites.tools = tools ?? { tools: [] };
+        }
+    }
+
+    return {
+        currentUser,
+        currentPreferences,
+        isAnonymous,
+        currentTheme,
+        currentFavorites,
+        loadUser,
+        setCurrentTheme,
+        addFavoriteTool,
+        removeFavoriteTool,
+    };
 });
