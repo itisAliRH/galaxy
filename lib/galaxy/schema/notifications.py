@@ -353,11 +353,6 @@ class UserNotificationUpdateRequest(NotificationUpdateRequest):
         title="Seen",
         description="Whether the notification should be marked as seen by the user. If not set, the notification will not be changed.",
     )
-    favorite: Optional[bool] = Field(
-        None,
-        title="Favorite",
-        description="Whether the notification should be marked as favorite by the user. If not set, the notification will not be changed.",
-    )
     deleted: Optional[bool] = Field(
         None,
         title="Deleted",

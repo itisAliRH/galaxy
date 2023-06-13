@@ -17,7 +17,7 @@ const notificationsStore = useNotificationsStore();
 const { notifications, loadingNotifications } = storeToRefs(notificationsStore);
 
 const showUnread = ref(false);
-const showFavorites = ref(false);
+const showShared = ref(false);
 const preferencesOpen = ref(false);
 const selectedNotificationIds = ref<string[]>([]);
 
@@ -30,12 +30,12 @@ const allSelected = computed(
 );
 
 function filterNotifications(notification: UserNotification) {
-    if (showUnread.value && showFavorites.value) {
-        return !notification.seen_time && notification.favorite;
+    if (showUnread.value && showShared.value) {
+        return !notification.seen_time && notification.category === "new_shared_item";
     } else if (showUnread.value) {
         return !notification.seen_time;
-    } else if (showFavorites.value) {
-        return notification.favorite;
+    } else if (showShared.value) {
+        return notification.category === "new_shared_item";
     } else {
         return true;
     }
@@ -124,13 +124,13 @@ function togglePreferences() {
                                     Unread
                                 </BButton>
                                 <BButton
-                                    id="show-favorites-filter"
+                                    id="show-shared-filter"
                                     size="sm"
-                                    :pressed="showFavorites"
+                                    :pressed="showShared"
                                     variant="outline-primary"
-                                    @click="showFavorites = !showFavorites">
-                                    <FontAwesomeIcon icon="star" />
-                                    Favorites
+                                    @click="showShared = !showShared">
+                                    <FontAwesomeIcon icon="retweet" />
+                                    Shared
                                 </BButton>
                             </BButtonGroup>
                         </BRow>
