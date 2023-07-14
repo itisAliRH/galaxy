@@ -45,6 +45,9 @@ const notificationVariant = computed(() => {
 
 function onClick(link: string) {
     notificationsStore.updateNotification(props.notification, { seen: true });
+    if (!link.startsWith("http") && !link.startsWith("/")) {
+        link = "/" + link;
+    }
     window.open(link, "_blank");
 }
 </script>
