@@ -15,7 +15,7 @@ const { activeBroadcasts } = storeToRefs(useBroadcastsStore());
 <template>
     <div v-if="activeBroadcasts.length > 0">
         <div v-for="broadcast in activeBroadcasts" :key="broadcast.id">
-            <BroadcastContainer :broadcast="broadcast" />
+            <BroadcastContainer :options="{ broadcast }" />
         </div>
     </div>
 </template>
