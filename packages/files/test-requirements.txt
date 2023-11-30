@@ -1,3 +1,4 @@
 pytest
 fs-gcsfs
 s3fs>=2023.1.0,<2024
+aiohttp>=3.9.0 # not directly required, pinned by Snyk to avoid a vulnerability
