@@ -1,12 +1,13 @@
-<script setup>
+<script setup lang="ts">
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faCheckCircle, faCloudUploadAlt, faExclamationCircle, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { BButton } from "bootstrap-vue";
-import { useTaskMonitor } from "composables/taskMonitor";
 import { watch } from "vue";
 
-library.add(faCloudUploadAlt, faSpinner, faCheckCircle, faExclamationCircle);
+import { useTaskMonitor } from "@/composables/taskMonitor";
+
+library.add(faCheckCircle, faCloudUploadAlt, faExclamationCircle, faSpinner);
 
 const { isRunning, isCompleted, hasFailed, requestHasFailed, waitForTask } = useTaskMonitor();
 
@@ -38,9 +39,9 @@ watch([isCompleted, hasFailed, requestHasFailed], ([newIsCompleted, newHasFailed
 
 <template>
     <BButton v-b-tooltip.hover.bottom :title="props.title" @click="() => emit('onClick')">
-        <FontAwesomeIcon v-if="isRunning" icon="spinner" spin />
-        <FontAwesomeIcon v-else-if="hasFailed || requestHasFailed" icon="exclamation-circle" />
-        <FontAwesomeIcon v-else-if="isCompleted" icon="check-circle" />
-        <FontAwesomeIcon v-else icon="cloud-upload-alt" />
+        <FontAwesomeIcon v-if="isRunning" :icon="faSpinner" spin />
+        <FontAwesomeIcon v-else-if="hasFailed || requestHasFailed" :icon="faExclamationCircle" />
+        <FontAwesomeIcon v-else-if="isCompleted" :icon="faCheckCircle" />
+        <FontAwesomeIcon v-else :icon="faCloudUploadAlt" />
     </BButton>
 </template>
