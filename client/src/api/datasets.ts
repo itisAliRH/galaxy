@@ -36,8 +36,11 @@ export async function getDatasets(options: GetDatasetsOptions = {}) {
     if (options.history_id) {
         params.history_id = options.history_id;
     }
-    const { data } = await datasetsFetcher(params);
-    return data;
+    const { data, headers } = await datasetsFetcher(params);
+
+    const total_matches = parseInt(headers.get("total_matches") ?? "0");
+
+    return { data, total_matches };
 }
 
 export const fetchDataset = fetcher.path("/api/datasets/{dataset_id}").method("get").create();
