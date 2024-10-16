@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import { faDatabase } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import axios from "axios";
+import { BBadge } from "bootstrap-vue";
 import { onMounted, type Ref, ref, watch } from "vue";
 
 import { withPrefix } from "@/utils/redirect";
@@ -52,31 +55,43 @@ watch(
 </script>
 
 <template>
-    <span v-if="historyStats" class="grid-datasets">
-        <span v-if="historyStats.nice_size" class="mr-2">
+    <BBadge
+        v-if="historyStats"
+        v-b-tooltip.hover.noninteractive
+        class="outline-badge cursor-pointer grid-datasets"
+        :title="`View history storage overview`"
+        variant="light"
+        :to="`/storage/history/${props.historyId}`">
+        <small v-if="historyStats.nice_size" class="mr-2">
+            <FontAwesomeIcon :icon="faDatabase" fixed-width />
             {{ historyStats.nice_size }}
-        </span>
+        </small>
+
         <span
             v-for="(stateCount, state) of historyStats.contents_states"
             :key="state"
-            :class="`stats state-color-${state}`"
-            :title="`${state} datasets`">
+            :class="`stats state-color-${state}`">
             {{ stateCount }}
         </span>
-        <span v-if="historyStats.contents_active.deleted" class="stats state-color-deleted" title="Deleted datasets">
+
+        <span v-if="historyStats.contents_active.deleted" class="stats state-color-deleted">
             {{ historyStats.contents_active.deleted }}
         </span>
-        <span v-if="historyStats.contents_active.hidden" class="stats state-color-hidden" title="Hidden datasets">
+
+        <span v-if="historyStats.contents_active.hidden" class="stats state-color-hidden">
             {{ historyStats.contents_active.hidden }}
         </span>
-    </span>
+    </BBadge>
 </template>
 
 <style lang="scss" scoped>
 @import "~bootstrap/scss/bootstrap.scss";
+
 .grid-datasets {
-    @extend .d-flex;
-    @extend .text-nowrap;
+    display: flex;
+    gap: 0.2rem;
+    font-size: small;
+
     .stats {
         @extend .rounded;
         @extend .px-1;
@@ -84,5 +99,11 @@ watch(
         border-width: 1px;
         border-style: solid;
     }
+
+    .state-color-deleted {
+        border-style: none;
+    }
+
+    align-items: center;
 }
 </style>

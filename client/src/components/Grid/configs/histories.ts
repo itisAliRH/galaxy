@@ -19,7 +19,8 @@ import Filtering, { contains, equals, expandNameTag, toBool, type ValidFilter } 
 import _l from "@/utils/localization";
 import { errorMessageAsString, rethrowSimple } from "@/utils/simple-error";
 
-import { type ActionArray, type BatchOperationArray, type FieldArray, type GridConfig } from "./types";
+import { commonActions, commonMoreActions, commonPrimaryActions } from "../utils";
+import { type ActionArray, type BatchOperationArray, type CardConfig, type FieldArray, type GridConfig } from "./types";
 
 const { emit } = useEventBus<string>("grid-router-push");
 
@@ -337,11 +338,28 @@ const validFilters: Record<string, ValidFilter<string | boolean | undefined>> = 
     },
 };
 
+const cardConfig: CardConfig = {
+    expandable: true,
+    renameAllowed: true,
+    gridView: false,
+    tagsHandler: async (data: string[], itemId: string) => {
+        try {
+            await updateTags(itemId, "History", data);
+        } catch (e) {
+            rethrowSimple(e);
+        }
+    },
+    moreActions: commonMoreActions,
+    primaryActions: commonPrimaryActions,
+    actions: commonActions,
+};
+
 /**
  * Grid configuration
  */
 const gridConfig: GridConfig = {
-    id: "histories-grid",
+    id: "my",
+    label: "My Histories",
     actions: actions,
     fields: fields,
     filtering: new Filtering(validFilters, undefined, false, false),
@@ -352,6 +370,9 @@ const gridConfig: GridConfig = {
     sortDesc: true,
     sortKeys: ["create_time", "name", "update_time"],
     title: "Histories",
+    limit: 25,
+    to: "/histories/list",
+    cardConfig: cardConfig,
 };
 
 export default gridConfig;

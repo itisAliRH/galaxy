@@ -11,10 +11,30 @@ export interface Action {
 
 export type ActionArray = Array<Action>;
 
+export interface ActionButton {
+    icon: any;
+    title: string;
+    disabled: boolean;
+    size: string; // TODO "sm" | "md" | "lg";
+    variant: string; // TODO "outline-primary" | "primary";
+    onClick?: (d: RowData) => void;
+    to?: (data: RowData) => string;
+    condition?: (data: RowData) => boolean;
+}
+export interface CardConfig {
+    expandable?: boolean;
+    gridView?: boolean;
+    renameAllowed?: boolean;
+    actions?: ActionButton[];
+    moreActions: ActionButton[];
+    primaryActions: ActionButton[];
+    tagsHandler?: (data: string[], itemId: string) => Promise<void>;
+}
 export interface GridConfig {
     id: string;
     actions?: ActionArray;
     fields: FieldArray;
+    label?: string;
     filtering?: Filtering<any>;
     getData: (
         offset: number,
@@ -27,9 +47,19 @@ export interface GridConfig {
     batch?: BatchOperationArray;
     plural: string;
     sortBy: string;
-    sortKeys: Array<string>;
+    sortKeys: string[];
     sortDesc: boolean;
     title: string;
+    limit?: number;
+    noItemsMessage?: string;
+    listFilters?: {
+        id: string;
+        text: string;
+        callback: () => void;
+    }[];
+    cardConfig?: CardConfig;
+    to?: string;
+    loginRequired?: boolean;
 }
 
 export type FieldArray = Array<FieldEntry>;

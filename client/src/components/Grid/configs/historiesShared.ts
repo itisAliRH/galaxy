@@ -8,6 +8,7 @@ import Filtering, { contains, expandNameTag, type ValidFilter } from "@/utils/fi
 import _l from "@/utils/localization";
 import { rethrowSimple } from "@/utils/simple-error";
 
+import { commonActions, commonMoreActions, commonPrimaryActions } from "../utils";
 import { type FieldArray, type GridConfig } from "./types";
 
 const { emit } = useEventBus<string>("grid-router-push");
@@ -115,11 +116,20 @@ const validFilters: Record<string, ValidFilter<string | boolean | undefined>> = 
     },
 };
 
+const cardConfig = {
+    renameAllowed: true,
+    gridView: false,
+    moreActions: [...commonMoreActions],
+    primaryActions: [...commonPrimaryActions],
+    actions: [...commonActions],
+};
+
 /**
  * Grid configuration
  */
 const gridConfig: GridConfig = {
-    id: "histories-shared-grid",
+    id: "shared",
+    label: "Shared with Me",
     fields: fields,
     filtering: new Filtering(validFilters, undefined, false, false),
     getData: getData,
@@ -128,6 +138,10 @@ const gridConfig: GridConfig = {
     sortDesc: true,
     sortKeys: ["create_time", "name", "update_time", "username"],
     title: "Shared Histories",
+    loginRequired: true,
+    limit: 25,
+    to: "/histories/list_shared",
+    cardConfig: cardConfig,
 };
 
 export default gridConfig;

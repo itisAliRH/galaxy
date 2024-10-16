@@ -1,4 +1,14 @@
-import { faEye } from "@fortawesome/free-solid-svg-icons";
+import {
+    faExchangeAlt,
+    faEye,
+    faPlus,
+    faShareAlt,
+    faSignature,
+    faTrash,
+    faTrashRestore,
+    faUpload,
+    faUsers,
+} from "@fortawesome/free-solid-svg-icons";
 import { useEventBus } from "@vueuse/core";
 
 import { GalaxyApi } from "@/api";
@@ -6,6 +16,7 @@ import Filtering, { contains, expandNameTag, type ValidFilter } from "@/utils/fi
 import _l from "@/utils/localization";
 import { rethrowSimple } from "@/utils/simple-error";
 
+import { commonActions, commonMoreActions, commonPrimaryActions, isOwner } from "../utils";
 import { type FieldArray, type GridConfig } from "./types";
 
 const { emit } = useEventBus<string>("grid-router-push");
@@ -106,11 +117,31 @@ const validFilters: Record<string, ValidFilter<string | boolean | undefined>> = 
     },
 };
 
+const cardConfig = {
+    renameAllowed: true,
+    gridView: false,
+    moreActions: [...commonMoreActions],
+    primaryActions: [
+        ...commonPrimaryActions,
+        {
+            condition: (data: HistoryEntry) => !isOwner(data.username as string),
+            icon: faUpload,
+            title: "Import",
+            disabled: false,
+            size: "sm",
+            variant: "outline-primary",
+            onClick: () => console.log("Import"),
+        },
+    ],
+    actions: [...commonActions],
+};
+
 /**
  * Grid configuration
  */
 const gridConfig: GridConfig = {
-    id: "histories-published-grid",
+    id: "published",
+    label: "Public Histories",
     fields: fields,
     filtering: new Filtering(validFilters, undefined, false, false),
     getData: getData,
@@ -119,6 +150,9 @@ const gridConfig: GridConfig = {
     sortDesc: true,
     sortKeys: ["name", "update_time", "username"],
     title: "Published Histories",
+    limit: 25,
+    to: "/histories/list_published",
+    cardConfig: cardConfig,
 };
 
 export default gridConfig;

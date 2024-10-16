@@ -72,6 +72,7 @@ const trimmedTags = computed(() => {
     if (!props.useToggleLink || toggledOpen.value) {
         return tags.value;
     } else {
+        console.log("trimmedTags: ", tags.value.slice(0, props.maxVisibleTags));
         return tags.value.slice(0, props.maxVisibleTags);
     }
 });
@@ -80,6 +81,7 @@ const slicedTags = computed(() => {
     if (!props.useToggleLink) {
         return [];
     } else {
+        console.log("slicedTags: ", tags.value.slice(props.maxVisibleTags), tags.value, props.maxVisibleTags);
         return tags.value.slice(props.maxVisibleTags);
     }
 });

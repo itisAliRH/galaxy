@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { library } from "@fortawesome/fontawesome-svg-core";
-import { faAngleDown, faAngleUp, faBars, faGripVertical } from "@fortawesome/free-solid-svg-icons";
+import { faAngleDown, faAngleUp, faGripVertical, faListUl } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { BButton } from "bootstrap-vue";
 import { computed, ref } from "vue";
 
 import { useUserStore } from "@/stores/userStore";
 
-library.add(faAngleDown, faAngleUp, faBars, faGripVertical);
+library.add(faAngleDown, faAngleUp, faListUl, faGripVertical);
 
 type ListView = "grid" | "list";
 type SortBy = "create_time" | "update_time" | "name";
@@ -73,6 +73,18 @@ defineExpose({
                     <FontAwesomeIcon v-show="sortBy === 'update_time'" :icon="sortDesc ? faAngleDown : faAngleUp" />
                     Update time
                 </BButton>
+
+                <BButton
+                    id="sortby-create-time"
+                    v-b-tooltip.hover
+                    size="sm"
+                    :title="sortDesc ? 'Sort by create time ascending' : 'Sort by create time descending'"
+                    :pressed="sortBy === 'create_time'"
+                    variant="outline-primary"
+                    @click="onSort('create_time')">
+                    <FontAwesomeIcon v-show="sortBy === 'create_time'" :icon="sortDesc ? faAngleDown : faAngleUp" />
+                    Create time
+                </BButton>
             </BButtonGroup>
 
             <slot name="extra-filter" />
@@ -100,7 +112,7 @@ defineExpose({
                     :pressed="listViewMode === 'list'"
                     variant="outline-primary"
                     @click="onToggleView('list')">
-                    <FontAwesomeIcon :icon="faBars" />
+                    <FontAwesomeIcon :icon="faListUl" />
                 </BButton>
             </BButtonGroup>
         </div>

@@ -113,6 +113,10 @@ async function onTagsUpdate(tags: string[]) {
 async function onTagClick(tag: string) {
     emit("tagClick", tag);
 }
+
+const maxVisibleTags = computed(() => {
+    return props.gridView ? 2 : 8;
+});
 </script>
 
 <template>
@@ -172,7 +176,6 @@ async function onTagClick(tag: string) {
                         clickable
                         :value="workflow.tags"
                         :disabled="isAnonymous || workflow.deleted || shared"
-                        :max-visible-tags="gridView ? 2 : 8"
                         @input="onTagsUpdate($event)"
                         @tag-click="onTagClick($event)" />
                 </div>
