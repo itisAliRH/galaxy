@@ -14,10 +14,12 @@ import { useUserStore } from "@/stores/userStore";
 import InvocationsPanel from "../Panels/InvocationsPanel.vue";
 import VisualizationPanel from "../Panels/VisualizationPanel.vue";
 import ActivityItem from "./ActivityItem.vue";
+import DataImportItem from "./Items/DataImportItem.vue";
 import InteractiveItem from "./Items/InteractiveItem.vue";
 import NotificationItem from "./Items/NotificationItem.vue";
 import UploadItem from "./Items/UploadItem.vue";
 import AdminPanel from "@/components/admin/AdminPanel.vue";
+import DataImportPanel from "@/components/Panels/DataImportPanel.vue";
 import FlexPanel from "@/components/Panels/FlexPanel.vue";
 import MultiviewPanel from "@/components/Panels/MultiviewPanel.vue";
 import NotificationsPanel from "@/components/Panels/NotificationsPanel.vue";
@@ -161,8 +163,17 @@ watch(
                     @end="isDragging = false">
                     <div v-for="(activity, activityIndex) in activities" :key="activityIndex">
                         <div v-if="activity.visible && (activity.anonymous || !isAnonymous)">
+                            <DataImportItem
+                                v-if="activity.id === 'data_import'"
+                                :id="`activity-${activity.id}`"
+                                :key="activity.id"
+                                :icon="activity.icon"
+                                :title="activity.title"
+                                :is-active="isActiveSideBar('data_import')"
+                                :tooltip="activity.tooltip"
+                                @click="onToggleSidebar('data_import')" />
                             <UploadItem
-                                v-if="activity.id === 'upload'"
+                                v-else-if="activity.id === 'upload'"
                                 :id="`activity-${activity.id}`"
                                 :key="activity.id"
                                 :icon="activity.icon"
@@ -234,6 +245,7 @@ watch(
             <VisualizationPanel v-else-if="isActiveSideBar('visualizations')" />
             <MultiviewPanel v-else-if="isActiveSideBar('multiview')" />
             <NotificationsPanel v-else-if="isActiveSideBar('notifications')" />
+            <DataImportPanel v-else-if="isActiveSideBar('data_import')" />
             <SettingsPanel v-else-if="isActiveSideBar('settings')" />
             <AdminPanel v-else-if="isActiveSideBar('admin')" />
         </FlexPanel>

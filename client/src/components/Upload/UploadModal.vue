@@ -1,4 +1,5 @@
 <script setup>
+import { BModal } from "bootstrap-vue";
 import { storeToRefs } from "pinia";
 import { ref, watch } from "vue";
 
@@ -71,13 +72,14 @@ defineExpose({
 </script>
 
 <template>
-    <b-modal
+    <BModal
         v-model="showModal"
+        size="xl"
         :static="options.modalStatic"
-        header-class="no-separator"
-        modal-class="ui-modal"
+        header-class="no-separator-2"
+        modal-class="upload-modal-2"
         dialog-class="upload-dialog"
-        body-class="upload-dialog-body"
+        body-class="upload-dialog-body-2"
         no-enforce-focus
         hide-footer>
         <template v-slot:modal-header>
@@ -95,7 +97,7 @@ defineExpose({
             :current-history-id="currentHistoryId"
             v-bind="options"
             @dismiss="dismiss" />
-    </b-modal>
+    </BModal>
 </template>
 
 <style>

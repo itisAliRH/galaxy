@@ -3,7 +3,7 @@ import { type IconDefinition, library } from "@fortawesome/fontawesome-svg-core"
 import { faCheckSquare, faMinusSquare, faSquare } from "@fortawesome/free-regular-svg-icons";
 import { faCaretLeft, faCheck, faFolder, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { BAlert, BButton, BLink, BModal, BPagination, BSpinner, BTable } from "bootstrap-vue";
+import { BAlert, BButton, BFormCheckbox, BLink, BModal, BOverlay, BPagination, BSpinner, BTable } from "bootstrap-vue";
 import { computed, ref, watch } from "vue";
 
 import { type ItemsProvider, SELECTION_STATES, type SelectionState } from "@/components/SelectionDialog/selectionTypes";
@@ -11,8 +11,11 @@ import type Filtering from "@/utils/filtering";
 
 import { type FieldEntry, type SelectionItem } from "./selectionTypes";
 
+import LoadingSpan from "../LoadingSpan.vue";
+import SelectionCard from "./SelectionCard.vue";
 import FilterMenu from "@/components/Common/FilterMenu.vue";
 import Heading from "@/components/Common/Heading.vue";
+import ListHeader from "@/components/Common/ListHeader.vue";
 import DataDialogSearch from "@/components/SelectionDialog/DataDialogSearch.vue";
 import StatelessTags from "@/components/TagsMultiselect/StatelessTags.vue";
 
@@ -77,7 +80,7 @@ const emit = defineEmits<{
     (e: "onCancel"): void;
     (e: "onClick", record: SelectionItem): void;
     (e: "onOk"): void;
-    (e: "onOpen", record: SelectionItem): void;
+    (e: "onOpen", record?: SelectionItem): void;
     (e: "onSelectAll"): void;
     (e: "onUndo"): void;
 }>();
@@ -173,7 +176,10 @@ watch(
 <template>
     <BModal
         v-if="modalShow"
+        size="xl"
+        centered
         modal-class="selection-dialog-modal"
+        dialog-class="selection-dialog-dialog"
         header-class="flex-column"
         visible
         :static="modalStatic"
@@ -202,7 +208,7 @@ watch(
         </BAlert>
         <div v-else>
             <div v-if="optionsShow">
-                <BTable
+                <!-- <BTable
                     small
                     hover
                     class="selection-dialog-table"
@@ -255,29 +261,43 @@ watch(
                     <template v-slot:cell(update_time)="data">
                         {{ formatTime(data.value) }}
                     </template>
-                </BTable>
-                <div v-if="isBusy" class="text-center">
+                </BTable> -->
+                <!-- <div v-if="isBusy" class="text-center">
                     <BSpinner small type="grow" />
                     <BSpinner small type="grow" />
                     <BSpinner small type="grow" />
-                </div>
-                <div v-else-if="totalItems === 0">
+                </div> -->
+                <div v-if="totalItems === 0">
                     <div v-if="filter">
                         No search results found for: <b>{{ filter }}</b
                         >.
                     </div>
-                    <div v-else>No entries.</div>
+                    <div v-else>
+                        <BAlert variant="info" show>No entries.</BAlert>
+                    </div>
                 </div>
             </div>
-            <div v-else data-description="selection dialog spinner">
-                <FontAwesomeIcon :icon="faSpinner" spin />
-                <span>Please wait...</span>
+
+            <div class="selection-dialog-filter-selection">
+                <ListHeader ref="listHeader" show-view-toggle> </ListHeader>
             </div>
+
+            <BOverlay :show="!optionsShow || isBusy">
+                <div v-for="item in items" :key="item.id">
+                    <SelectionCard :item="item" @select="emit('onClick', $event)" @open="emit('onOpen')" />
+                </div>
+            </BOverlay>
         </div>
+
         <template v-slot:modal-footer>
             <div class="d-flex justify-content-between w-100">
                 <div>
-                    <BButton v-if="undoShow" data-description="selection dialog undo" size="sm" @click="emit('onUndo')">
+                    <BButton
+                        v-if="undoShow"
+                        data-description="selection dialog undo"
+                        variant="outline-primary"
+                        size="sm"
+                        @click="emit('onUndo')">
                         <FontAwesomeIcon :icon="faCaretLeft" />
                         Back
                     </BButton>
@@ -294,7 +314,7 @@ watch(
                     <BButton
                         data-description="selection dialog cancel"
                         size="sm"
-                        variant="secondary"
+                        variant="outline-danger"
                         @click="emit('onCancel')">
                         <FontAwesomeIcon :icon="faTimes" />
                         Cancel
@@ -315,10 +335,23 @@ watch(
     </BModal>
 </template>
 
-<style>
+<style lang="scss">
+@import "theme/blue.scss";
+
 .selection-dialog-modal .modal-body {
-    max-height: 50vh;
-    height: 50vh;
+    max-height: 80vh;
+    min-height: 60vh;
     overflow-y: auto;
+}
+.selection-dialog-dialog {
+    width: 1140px !important;
+}
+
+.selection-dialog-filter-selection {
+    display: flex;
+    // padding: 0.5rem 1rem;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid $border-color;
 }
 </style>

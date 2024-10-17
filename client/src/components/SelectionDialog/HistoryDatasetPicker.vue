@@ -8,13 +8,13 @@ import {
     type ItemsProvider,
     type ItemsProviderContext,
     SELECTION_STATES,
-    type SelectionItem,
+    type SelectionItemNew,
 } from "@/components/SelectionDialog/selectionTypes";
 import { errorMessageAsString } from "@/utils/simple-error";
 
 import SelectionDialog from "@/components/SelectionDialog/SelectionDialog.vue";
 
-interface HistoryRecord extends SelectionItem {
+interface HistoryRecord extends SelectionItemNew {
     size: number;
 }
 
@@ -32,7 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
     (e: "reload"): void;
     (e: "onClose"): void;
-    (e: "onSelect", datasets: SelectionItem[]): void;
+    (e: "onSelect", datasets: SelectionItemNew[]): void;
 }>();
 
 const selectionDialog = ref();
@@ -46,8 +46,8 @@ const submitting = ref(false);
 const allSelected = ref(false);
 const datasetsVisible = ref(false);
 
-const items = ref<SelectionItem[]>([]);
-const selected = ref<SelectionItem[]>([]);
+const items = ref<SelectionItemNew[]>([]);
+const selected = ref<SelectionItemNew[]>([]);
 
 const itemsProvider = ref<ItemsProvider>(historiesProvider);
 
@@ -97,20 +97,20 @@ function historyEntryToRecord(entry: HistorySummary): HistoryRecord {
         isLeaf: false,
         url: entry.url,
         size: entry.count,
-        update_time: entry.update_time,
+        updated: entry.update_time,
     };
 
     return result;
 }
 
-function datasetEntryToRecord(entry: HDASummary): SelectionItem {
+function datasetEntryToRecord(entry: HDASummary): SelectionItemNew {
     const result = {
         id: entry.id,
         label: entry.name || "",
         details: "",
         isLeaf: true,
         url: entry.url,
-        update_time: entry.update_time,
+        updated: entry.update_time || "",
     };
 
     return result;
@@ -142,7 +142,7 @@ function checkIfAllSelected(): boolean {
     );
 }
 
-async function historiesProvider(ctx: ItemsProviderContext, url?: string): Promise<SelectionItem[]> {
+async function historiesProvider(ctx: ItemsProviderContext, url?: string): Promise<SelectionItemNew[]> {
     loading.value = true;
 
     try {
@@ -240,7 +240,7 @@ async function datasetsProvider(ctx: ItemsProviderContext, selectedHistory: Hist
     }
 }
 
-function onHistoryClick(item: SelectionItem) {
+function onHistoryClick(item: SelectionItemNew) {
     if (!item.isLeaf) {
         selectionDialog.value?.resetFilter();
         selectionDialog.value?.resetPagination();
@@ -249,7 +249,7 @@ function onHistoryClick(item: SelectionItem) {
     }
 }
 
-async function onDatasetClick(item: SelectionItem) {
+async function onDatasetClick(item: SelectionItemNew) {
     if (item.isLeaf) {
         if (selected.value.findIndex((i) => i.id === item.id) !== -1) {
             selected.value = selected.value.filter((i) => i.id !== item.id);

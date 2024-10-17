@@ -21,6 +21,17 @@ export interface SelectionItem {
     _rowVariant?: SelectionState;
 }
 
+export interface SelectionItemNew {
+    id: string;
+    label: string;
+    updated: Date | string;
+    description?: string;
+    isLeaf: boolean;
+    url: string;
+    size?: number;
+    variant?: SelectionState;
+    _rowVariant?: SelectionState;
+}
 export interface ItemsProviderContext {
     apiUrl?: string;
     currentPage: number;
@@ -30,4 +41,4 @@ export interface ItemsProviderContext {
     sortDesc?: boolean;
 }
 
-export type ItemsProvider = (ctx: ItemsProviderContext) => Promise<SelectionItem[]>;
+export type ItemsProvider = (ctx: ItemsProviderContext) => Promise<SelectionItemNew[]>;

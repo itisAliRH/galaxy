@@ -66,6 +66,7 @@ import { parseBool } from "@/utils/utils";
 import { patchRouterPush } from "./router-push";
 
 import AboutGalaxy from "@/components/AboutGalaxy.vue";
+import DataImport from "@/components/DataImport/DataImport.vue";
 import EditFileSourceInstance from "@/components/FileSources/Instances/EditInstance.vue";
 import ManageFileSourceIndex from "@/components/FileSources/Instances/ManageIndex.vue";
 import UpgradeFileSourceInstance from "@/components/FileSources/Instances/UpgradeInstance.vue";
@@ -211,6 +212,34 @@ export function getRouter(Galaxy) {
                         path: "custom_builds",
                         component: CustomBuilds,
                         redirect: redirectAnon(),
+                    },
+                    {
+                        path: "data_import",
+                        component: DataImport,
+                    },
+                    {
+                        path: "data_import/composite",
+                        component: DataImport,
+                        props: (route) => ({
+                            activeTab: "composite",
+                            query: { ...route.query },
+                        }),
+                    },
+                    {
+                        path: "data_import/collection",
+                        component: DataImport,
+                        props: (route) => ({
+                            activeTab: "collection",
+                            query: { ...route.query },
+                        }),
+                    },
+                    {
+                        path: "data_import/rule_based",
+                        component: DataImport,
+                        props: (route) => ({
+                            activeTab: "rule_based",
+                            query: { ...route.query },
+                        }),
                     },
                     {
                         path: "collection/:collectionId/edit",

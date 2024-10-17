@@ -47,6 +47,7 @@ var ImportCollectionModal = Backbone.View.extend({
                     this.modal.show({
                         closing_events: true,
                         title: "Create History Collection from Datasets",
+                        width: "800px",
                         body: template({
                             selected_datasets: checked_items.dataset_ids.length,
                             histories: this.histories.models,

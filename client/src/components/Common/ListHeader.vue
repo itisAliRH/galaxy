@@ -2,7 +2,7 @@
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { faAngleDown, faAngleUp, faBars, faGripVertical } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { BButton } from "bootstrap-vue";
+import { BButton, BFormCheckbox } from "bootstrap-vue";
 import { computed, ref } from "vue";
 
 import { useUserStore } from "@/stores/userStore";
@@ -13,12 +13,21 @@ type ListView = "grid" | "list";
 type SortBy = "create_time" | "update_time" | "name";
 
 interface Props {
+    showSelectAll?: boolean;
+    allSelected?: boolean;
+    haveSelected?: boolean;
+    selectedItems?: string[];
     showViewToggle?: boolean;
 }
 
 withDefaults(defineProps<Props>(), {
     showViewToggle: false,
+    selectedItems: undefined,
 });
+
+const emit = defineEmits<{
+    (e: "select-all"): void;
+}>();
 
 const userStore = useUserStore();
 
@@ -47,6 +56,10 @@ defineExpose({
 
 <template>
     <div class="list-header">
+        <BFormCheckbox v-if="showSelectAll" :checked="allSelected" @change="emit('select-all')">
+            {{ haveSelected ? `${selectedItems.length} selected` : "Select all" }}
+        </BFormCheckbox>
+
         <div class="list-header-filters">
             Sort by:
             <BButtonGroup>
@@ -110,6 +123,8 @@ defineExpose({
 <style scoped lang="scss">
 .list-header {
     display: flex;
+    width: 100%;
+    padding: 0 0.5rem 0.5rem;
     justify-content: space-between;
     align-items: center;
 

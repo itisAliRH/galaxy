@@ -16,6 +16,7 @@ import {
     type ItemsProviderContext,
     SELECTION_STATES,
     type SelectionItem,
+    type SelectionItemNew,
     type SelectionState,
 } from "@/components/SelectionDialog/selectionTypes";
 import { useConfig } from "@/composables/config";
@@ -42,7 +43,7 @@ interface FilesDialogProps {
     /** Whether to show only writable sources */
     requireWritable?: boolean;
     /** Optional selected item to start browsing from */
-    selectedItem?: SelectionItem;
+    selectedItem?: SelectionItemNew;
 }
 
 const props = withDefaults(defineProps<FilesDialogProps>(), {
@@ -60,10 +61,10 @@ const { config, isConfigLoaded } = useConfig();
 const selectionModel = ref<Model>(new Model({ multiple: props.multiple }));
 
 const allSelected = ref(false);
-const selectedDirectories = ref<SelectionItem[]>([]);
+const selectedDirectories = ref<SelectionItemNew[]>([]);
 const errorMessage = ref<string>();
 const filter = ref();
-const items = ref<SelectionItem[]>([]);
+const items = ref<SelectionItemNew[]>([]);
 const itemsProvider = ref<ItemsProvider>();
 const modalShow = ref(true);
 const optionsShow = ref(false);
@@ -72,7 +73,7 @@ const hasValue = ref(false);
 const showTime = ref(true);
 const showDetails = ref(true);
 const isBusy = ref(false);
-const currentDirectory = ref<SelectionItem>();
+const currentDirectory = ref<SelectionItemNew>();
 const showFTPHelper = ref(false);
 const selectAllIcon = ref<SelectionState>(SELECTION_STATES.UNSELECTED);
 const urlTracker = ref(new UrlTracker(""));
@@ -97,7 +98,7 @@ const okButtonDisabled = computed(
 );
 
 /** Collects selected datasets in value array **/
-function clicked(record: SelectionItem) {
+function clicked(record: SelectionItemNew) {
     // ignore the click during directory mode
     if (!fileMode.value) {
         return;
@@ -112,7 +113,7 @@ function clicked(record: SelectionItem) {
     formatRows();
 }
 
-function selectSingleRecord(record: SelectionItem, selectOnly = false) {
+function selectSingleRecord(record: SelectionItemNew, selectOnly = false) {
     const selected = selectionModel.value.exists(record.id);
     if (selected) {
         unselectPath(record.url, true);
@@ -157,7 +158,7 @@ function unselectPath(path: string, unselectOnlyAboveDirectories = false, unsele
     }
 }
 
-function selectDirectoryRecursive(record: SelectionItem) {
+function selectDirectoryRecursive(record: SelectionItemNew) {
     // if directory is `selected` or `mixed` unselect everything
     if (isDirectorySelected(record.id) || selectionModel.value.pathExists(record.url)) {
         unselectPath(record.url, false, record.id);
@@ -230,12 +231,12 @@ function checkIfAllSelected(): boolean {
     return isAllSelected;
 }
 
-function open(record: SelectionItem) {
+function open(record: SelectionItemNew) {
     load(record);
 }
 
 /** Performs server request to retrieve data records **/
-function load(record?: SelectionItem) {
+function load(record?: SelectionItemNew) {
     currentDirectory.value = urlTracker.value.getUrl(record);
     showFTPHelper.value = record?.url === "gxftp://";
     filter.value = undefined;
@@ -311,7 +312,7 @@ function shouldUseItemsProvider(): boolean {
 /**
  *  Fetches items from the server using server-side pagination and filtering.
  **/
-async function provideItems(ctx: ItemsProviderContext, url?: string): Promise<SelectionItem[]> {
+async function provideItems(ctx: ItemsProviderContext, url?: string): Promise<SelectionItemNew[]> {
     isBusy.value = true;
     try {
         if (!url) {
@@ -342,12 +343,21 @@ function filterByMode(results: RemoteEntry[]): RemoteEntry[] {
     return results;
 }
 
-function entryToRecord(entry: RemoteEntry): SelectionItem {
-    const result = {
+function entryToRecord(entry: RemoteEntry): SelectionItemNew {
+    // const result = {
+    //     id: entry.uri,
+    //     label: entry.name,
+    //     time: entry.class === "File" ? entry.ctime : "",
+    //     details: entry.class === "File" ? entry.ctime : "",
+    //     isLeaf: entry.class === "File",
+    //     url: entry.uri,
+    //     size: entry.class === "File" ? entry.size : 0,
+    // };
+
+    const result: SelectionItemNew = {
         id: entry.uri,
         label: entry.name,
-        time: entry.class === "File" ? entry.ctime : "",
-        details: entry.class === "File" ? entry.ctime : "",
+        updated: entry.class === "File" ? entry.ctime : "",
         isLeaf: entry.class === "File",
         url: entry.uri,
         size: entry.class === "File" ? entry.size : 0,

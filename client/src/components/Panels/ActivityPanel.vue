@@ -84,14 +84,16 @@ const hasGoToAll = computed(
         flex-direction: column;
         flex-grow: 1;
         overflow-y: hidden;
-        button:first-child {
-            background: none;
-            border: none;
-            text-align: left;
-            transition: none;
-            width: 100%;
-            border-color: transparent;
-        }
+        position: relative;
+
+        // button:first-child {
+        //     background: none;
+        //     border: none;
+        //     text-align: left;
+        //     transition: none;
+        //     width: 100%;
+        //     border-color: transparent;
+        // }
         button:first-child:hover {
             background: $gray-200;
         }
