@@ -1,18 +1,31 @@
 <script setup lang="ts">
+import { type IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faFile } from "@fortawesome/free-regular-svg-icons";
 import { faDatabase, faFolder } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { BBadge, BFormCheckbox } from "bootstrap-vue";
+import { computed } from "vue";
 
 import { bytesToString } from "@/utils/utils";
 
-import type { SelectionItemNew } from "./selectionTypes";
+import { SELECTION_STATES, type SelectionItemNew } from "./selectionTypes";
+
+import StatelessTags from "@/components/TagsMultiselect/StatelessTags.vue";
 
 interface Props {
     item: SelectionItemNew;
+    isEncoded?: boolean;
+    showSelectIcon?: boolean;
+    leafIcon?: IconDefinition;
+    folderIcon?: IconDefinition;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    isEncoded: false,
+    showSelectIcon: true,
+    leafIcon: () => faFile,
+    folderIcon: () => faFolder,
+});
 
 const emit = defineEmits<{
     (e: "open", item: SelectionItemNew): void;
@@ -20,17 +33,21 @@ const emit = defineEmits<{
     (e: "update-filter", key: string, value: any): void;
 }>();
 
+const checked = computed(() => props.item._rowVariant === SELECTION_STATES.SELECTED);
+const indeterminateChecked = computed(() => props.item._rowVariant === SELECTION_STATES.MIXED);
+
 function onSelect(item: SelectionItemNew) {
+    console.log("onSelect SelectionCard.onSelect", item);
+
     emit("select", item);
 }
 
 function onOpen(item: SelectionItemNew) {
+    console.log("onOpen SelectionCard.onSelect", item);
     if (!item.isLeaf) {
         emit("open", item);
     }
 }
-
-console.log("SelectionCard", props.item);
 
 function formatTime(value: Date | string) {
     if (value) {
@@ -47,6 +64,8 @@ function formatTime(value: Date | string) {
         return "-";
     }
 }
+
+console.log("SelectionCard", props.item);
 </script>
 
 <template>
@@ -59,32 +78,49 @@ function formatTime(value: Date | string) {
             <div class="d-flex">
                 <div class="selection-card-control">
                     <BFormCheckbox
+                        v-if="props.showSelectIcon"
                         class="cursor-pointer align-self-end"
-                        :checked="props.item._rowVariant === 'success'"
-                        data-description="grid selected"
+                        :checked="checked"
+                        :indeterminate="indeterminateChecked"
                         @change="onSelect(props.item)" />
                 </div>
 
                 <div class="selection-card-data" @click="onSelect(props.item)">
                     <div class="selection-card-body">
                         <span class="selection-card-name">
-                            <FontAwesomeIcon v-if="props.item.isLeaf" :icon="faFile" fixed-width size="sm" />
-                            <FontAwesomeIcon v-else :icon="faFolder" fixed-width size="sm" />
+                            <pre v-if="isEncoded" :title="`label-${props.item.url}`">
+                                <code>{{ props.item.label }}</code>
+                            </pre>
+                            <span v-else-if="props.item.isLeaf">
+                                <FontAwesomeIcon :icon="props.leafIcon" fixed-width size="sm" />
+                                <span :title="`label-${props.item.url}`">
+                                    {{ props.item.label }}
+                                </span>
+                            </span>
+                            <span v-else :title="`label-${props.item.url}`" @click="onOpen(props.item)">
+                                <FontAwesomeIcon :icon="props.folderIcon" fixed-width size="sm" />
 
-                            <span :class="{ 'parent-title': !props.item.isLeaf }" @click="onOpen(props.item)">
-                                {{ props.item.label }}
+                                <span class="parent-title">
+                                    {{ props.item.label }}
+                                </span>
                             </span>
                         </span>
 
-                        <span v-if="props.item.updated" class="selection-card-header-right">
-                            {{ formatTime(props.item.updated) }}
+                        <span v-if="props.item.update_time || props.item.time" class="selection-card-header-right">
+                            {{ formatTime(props.item.update_time ?? props.item.time) }}
                         </span>
                     </div>
 
                     <div class="selection-card-footer">
-                        <div class="selection-card-description">
-                            {{ props.item.description }}
+                        <StatelessTags
+                            v-if="(props.item.tags ?? []).length > 0"
+                            :value="props.item.tags"
+                            :disabled="true" />
+
+                        <div class="selection-card-description" :title="`details-${props.item.url}`">
+                            {{ props.item.details }}
                         </div>
+
                         <BBadge
                             v-if="props.item.isLeaf"
                             v-b-tooltip.hover.noninteractive
@@ -111,6 +147,8 @@ function formatTime(value: Date | string) {
     container: selection-card-item / inline-size;
     padding: 0;
 
+    border-bottom: 0.1rem solid $brand-secondary;
+
     @container (max-width: #{$breakpoint-md}) {
         & {
             padding: 0 0.25rem 0.5rem 0.25rem;
@@ -124,6 +162,8 @@ function formatTime(value: Date | string) {
 
     &:hover {
         cursor: pointer;
+        border-radius: 0.25rem;
+
         background-color: $brand-secondary;
     }
 
@@ -132,7 +172,6 @@ function formatTime(value: Date | string) {
         display: flex;
         flex-direction: column;
         padding: 0.5rem;
-        border-bottom: 0.1rem solid $brand-secondary;
 
         .selection-card-control {
             display: flex;

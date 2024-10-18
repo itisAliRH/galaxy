@@ -97,7 +97,7 @@ function historyEntryToRecord(entry: HistorySummary): HistoryRecord {
         isLeaf: false,
         url: entry.url,
         size: entry.count,
-        updated: entry.update_time,
+        update_time: entry.update_time,
     };
 
     return result;
@@ -110,7 +110,7 @@ function datasetEntryToRecord(entry: HDASummary): SelectionItemNew {
         details: "",
         isLeaf: true,
         url: entry.url,
-        updated: entry.update_time || "",
+        update_time: entry.update_time || "",
     };
 
     return result;

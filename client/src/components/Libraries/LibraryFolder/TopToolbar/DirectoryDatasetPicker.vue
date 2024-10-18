@@ -273,7 +273,6 @@ watch(
         visible
         scrollable
         size="lg"
-        dialog-class="directory-dataset-picker-dialog"
         content-class="directory-dataset-picker"
         @hide="emit('onClose')">
         <BTabs v-if="!pathMode" v-model="activeTab" fill pills>
@@ -355,24 +354,19 @@ watch(
     </BModal>
 </template>
 
-<style lang="scss">
-.directory-dataset-picker-dialog {
-    // width: 768px;
-    color: red !important;
+<style scoped lang="scss">
+.directory-dataset-picker {
+    display: grid;
+    grid-template-rows: max-content 1fr;
 
-    .directory-dataset-picker {
+    .directory-dataset-picker-options {
         display: grid;
-        grid-template-rows: max-content 1fr;
+        grid-template-columns: 1fr 1fr;
+    }
 
-        .directory-dataset-picker-options {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-        }
-
-        .directory-dataset-picker-list {
-            max-height: 100%;
-            overflow-y: auto;
-        }
+    .directory-dataset-picker-list {
+        max-height: 100%;
+        overflow-y: auto;
     }
 }
 </style>

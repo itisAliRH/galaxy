@@ -3,21 +3,24 @@ import { type IconDefinition, library } from "@fortawesome/fontawesome-svg-core"
 import { faCheckSquare, faMinusSquare, faSquare } from "@fortawesome/free-regular-svg-icons";
 import { faCaretLeft, faCheck, faFolder, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { BAlert, BButton, BFormCheckbox, BLink, BModal, BOverlay, BPagination, BSpinner, BTable } from "bootstrap-vue";
+import { BAlert, BButton, BModal, BOverlay, BPagination } from "bootstrap-vue";
 import { computed, ref, watch } from "vue";
 
-import { type ItemsProvider, SELECTION_STATES, type SelectionState } from "@/components/SelectionDialog/selectionTypes";
+import {
+    type FieldEntry,
+    type ItemsProvider,
+    type ItemsProviderContext,
+    SELECTION_STATES,
+    type SelectionItemNew,
+    type SelectionState,
+} from "@/components/SelectionDialog/selectionTypes";
 import type Filtering from "@/utils/filtering";
 
-import { type FieldEntry, type SelectionItem } from "./selectionTypes";
-
-import LoadingSpan from "../LoadingSpan.vue";
 import SelectionCard from "./SelectionCard.vue";
 import FilterMenu from "@/components/Common/FilterMenu.vue";
 import Heading from "@/components/Common/Heading.vue";
 import ListHeader from "@/components/Common/ListHeader.vue";
 import DataDialogSearch from "@/components/SelectionDialog/DataDialogSearch.vue";
-import StatelessTags from "@/components/TagsMultiselect/StatelessTags.vue";
 
 library.add(faCaretLeft, faCheck, faCheckSquare, faFolder, faMinusSquare, faSpinner, faSquare, faTimes);
 
@@ -31,7 +34,7 @@ interface Props {
     fields?: FieldEntry[];
     isBusy?: boolean;
     isEncoded?: boolean;
-    items?: SelectionItem[];
+    items?: SelectionItemNew[];
     itemsProvider?: ItemsProvider;
     providerUrl?: string;
     totalItems?: number;
@@ -78,9 +81,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
     (e: "onCancel"): void;
-    (e: "onClick", record: SelectionItem): void;
+    (e: "onClick", record: SelectionItemNew): void;
     (e: "onOk"): void;
-    (e: "onOpen", record?: SelectionItem): void;
+    (e: "onOpen", record?: SelectionItemNew): void;
     (e: "onSelectAll"): void;
     (e: "onUndo"): void;
 }>();
@@ -89,56 +92,16 @@ const filter = ref("");
 const currentPage = ref(1);
 const perPage = ref(25);
 const showAdvancedSearch = ref(false);
+const filteredItems = ref<SelectionItemNew[]>([]);
 
 const okButtonText = computed(() => {
     return props.okButtonText ? props.okButtonText : props.fileMode ? "Select" : "Select this folder";
 });
 
-const fieldDetails = computed(() => {
-    const fields = props.fields.slice().map((x) => {
-        x.sortable = x.sortable === undefined ? true : x.sortable;
-        return x;
-    });
-    if (fields.length === 0) {
-        fields.unshift(LABEL_FIELD);
-    }
-    if (props.showSelectIcon) {
-        fields.unshift(SELECT_ICON_FIELD);
-    }
-    return fields;
-});
-
-function selectionIcon(variant: string) {
-    switch (variant) {
-        case SELECTION_STATES.SELECTED:
-            return faCheckSquare;
-        case SELECTION_STATES.MIXED:
-            return faMinusSquare;
-        default:
-            return faSquare;
-    }
-}
-
 /** Resets pagination when a filter/search word is entered **/
-function filtered(items: SelectionItem[]) {
+function filtered(items: SelectionItemNew[]) {
     if (props.itemsProvider === undefined) {
         resetPagination();
-    }
-}
-
-/** Format time stamp */
-function formatTime(value: string) {
-    if (value) {
-        const date = new Date(value);
-        return date.toLocaleString("default", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-            minute: "numeric",
-            hour: "numeric",
-        });
-    } else {
-        return "-";
     }
 }
 
@@ -155,12 +118,30 @@ defineExpose({
     resetPagination,
 });
 
+async function fetchItems() {
+    if (props.itemsProvider) {
+        const context: ItemsProviderContext = {
+            currentPage: currentPage.value,
+            perPage: perPage.value,
+            filter: filter.value,
+        };
+        const is = await props.itemsProvider(context);
+        filteredItems.value = is;
+    }
+}
+
 watch(
     () => props.items,
     () => {
-        filtered(props.items);
+        if (props.itemsProvider !== undefined) {
+            resetPagination();
+        }
     }
 );
+
+if (props.itemsProvider !== undefined) {
+    fetchItems();
+}
 
 watch(
     () => props.providerUrl,
@@ -179,112 +160,72 @@ watch(
         size="xl"
         centered
         modal-class="selection-dialog-modal"
-        dialog-class="selection-dialog-dialog"
-        header-class="flex-column"
+        header-class="selection-dialog-header"
         visible
         :static="modalStatic"
         :title="title"
         @hide="emit('onCancel')">
         <template v-slot:modal-header>
-            <slot name="header">
-                <Heading v-if="props.title" h2> {{ props.title }} </Heading>
+            <div id="selection-dialog-header" class="selection-dialog-header">
+                <slot name="header">
+                    <Heading v-if="props.title" h2>
+                        {{ props.title }}
+                    </Heading>
 
-                <FilterMenu
-                    v-if="props.filterClass"
-                    :name="props.title"
-                    class="w-100"
-                    :placeholder="props.searchTitle || props.title"
-                    :filter-class="props.filterClass"
-                    :filter-text.sync="filter"
-                    :loading="props.isBusy"
-                    :show-advanced.sync="showAdvancedSearch" />
+                    <FilterMenu
+                        v-if="props.filterClass"
+                        :name="props.title"
+                        class="w-100 mb-2"
+                        :placeholder="props.searchTitle || props.title"
+                        :filter-class="props.filterClass"
+                        :filter-text.sync="filter"
+                        :loading="props.isBusy"
+                        :show-advanced.sync="showAdvancedSearch" />
 
-                <DataDialogSearch v-else v-model="filter" :title="props.searchTitle || props.title" />
-            </slot>
-        </template>
-        <slot name="helper" />
-        <BAlert v-if="errorMessage" variant="danger" show>
-            {{ errorMessage }}
-        </BAlert>
-        <div v-else>
-            <div v-if="optionsShow">
-                <!-- <BTable
-                    small
-                    hover
-                    class="selection-dialog-table"
-                    primary-key="id"
-                    :busy="isBusy"
-                    :current-page="currentPage"
-                    :items="itemsProvider ?? items"
-                    :fields="fieldDetails"
-                    :filter="filter"
-                    :per-page="perPage"
-                    @filtered="filtered"
-                    @row-clicked="emit('onClick', $event)">
-                    <template v-slot:head(__select_icon__)="">
-                        <FontAwesomeIcon
-                            class="select-checkbox cursor-pointer"
-                            title="Check to select all datasets"
-                            :icon="selectionIcon(selectAllVariant)"
-                            @click="$emit('onSelectAll')" />
-                    </template>
-                    <template v-slot:cell(__select_icon__)="data">
-                        <FontAwesomeIcon :icon="selectionIcon(data.item._rowVariant)" />
-                    </template>
-                    <template v-slot:cell(label)="data">
-                        <div style="cursor: pointer">
-                            <pre
-                                v-if="isEncoded"
-                                :title="`label-${data.item.url}`"><code>{{ data.value ? data.value : "-" }}</code></pre>
-                            <span v-else>
-                                <div v-if="data.item.isLeaf">
-                                    <i :class="leafIcon" />
-                                    <span :title="`label-${data.item.url}`">{{ data.value ? data.value : "-" }}</span>
-                                </div>
-                                <div v-else @click.stop="emit('onOpen', data.item)">
-                                    <FontAwesomeIcon :icon="props.folderIcon" />
-                                    <BLink :title="`label-${data.item.url}`">{{ data.value ? data.value : "-" }}</BLink>
-                                </div>
-                            </span>
-                        </div>
-                    </template>
-                    <template v-slot:cell(details)="data">
-                        <span :title="`details-${data.item.url}`">{{ data.value ? data.value : "-" }}</span>
-                    </template>
-                    <template v-slot:cell(tags)="data">
-                        <StatelessTags v-if="data.value?.length > 0" :value="data.value" :disabled="true" />
-                        <span v-else>-</span>
-                    </template>
-                    <template v-slot:cell(time)="data">
-                        {{ formatTime(data.value) }}
-                    </template>
-                    <template v-slot:cell(update_time)="data">
-                        {{ formatTime(data.value) }}
-                    </template>
-                </BTable> -->
-                <!-- <div v-if="isBusy" class="text-center">
-                    <BSpinner small type="grow" />
-                    <BSpinner small type="grow" />
-                    <BSpinner small type="grow" />
-                </div> -->
-                <div v-if="totalItems === 0">
-                    <div v-if="filter">
-                        No search results found for: <b>{{ filter }}</b
-                        >.
+                    <DataDialogSearch
+                        v-else
+                        v-model="filter"
+                        class="w-100 mb-2"
+                        :title="props.searchTitle || props.title" />
+
+                    <div class="selection-dialog-filter-selection">
+                        <ListHeader
+                            ref="listHeader"
+                            show-view-toggle
+                            :intermediate-selected="selectAllVariant === SELECTION_STATES.MIXED"
+                            :all-selected="selectAllVariant === SELECTION_STATES.SELECTED"
+                            :show-select-all="props.showSelectIcon && props.multiple"
+                            @select-all="emit('onSelectAll')" />
                     </div>
-                    <div v-else>
-                        <BAlert variant="info" show>No entries.</BAlert>
-                    </div>
-                </div>
+                </slot>
             </div>
+        </template>
 
-            <div class="selection-dialog-filter-selection">
-                <ListHeader ref="listHeader" show-view-toggle> </ListHeader>
+        <slot name="helper" />
+
+        <div v-if="optionsShow">
+            <BAlert v-if="errorMessage" variant="danger" show>
+                {{ errorMessage }}
+            </BAlert>
+
+            <div v-if="totalItems === 0">
+                <BAlert v-if="filter" variant="info" show>
+                    No search results found for:
+                    <b>{{ filter }}</b
+                    >.
+                </BAlert>
+
+                <BAlert v-else variant="info" show> No entries. </BAlert>
             </div>
 
             <BOverlay :show="!optionsShow || isBusy">
                 <div v-for="item in items" :key="item.id">
-                    <SelectionCard :item="item" @select="emit('onClick', $event)" @open="emit('onOpen')" />
+                    <SelectionCard
+                        :id="`selection-card-item-${item.id}`"
+                        :show-select-icon="props.showSelectIcon"
+                        :item="item"
+                        @select="emit('onClick', $event)"
+                        @open="emit('onOpen')" />
                 </div>
             </BOverlay>
         </div>
@@ -301,8 +242,10 @@ watch(
                         <FontAwesomeIcon :icon="faCaretLeft" />
                         Back
                     </BButton>
+
                     <slot v-if="!errorMessage" name="buttons" />
                 </div>
+
                 <BPagination
                     v-if="totalItems > perPage"
                     v-model="currentPage"
@@ -310,6 +253,7 @@ watch(
                     size="sm"
                     :per-page="perPage"
                     :total-rows="totalItems" />
+
                 <div>
                     <BButton
                         data-description="selection dialog cancel"
@@ -319,6 +263,7 @@ watch(
                         <FontAwesomeIcon :icon="faTimes" />
                         Cancel
                     </BButton>
+
                     <BButton
                         v-if="multiple || !fileMode"
                         data-description="selection dialog ok"
@@ -335,23 +280,28 @@ watch(
     </BModal>
 </template>
 
-<style lang="scss">
-@import "theme/blue.scss";
-
+<style>
 .selection-dialog-modal .modal-body {
-    max-height: 80vh;
-    min-height: 60vh;
+    max-height: 70vh;
+    min-height: 70vh;
     overflow-y: auto;
 }
-.selection-dialog-dialog {
-    width: 1140px !important;
+
+.selection-dialog-header {
+    position: sticky;
+    flex-direction: column;
+    padding-bottom: 0 !important;
+    width: 100%;
 }
+</style>
+
+<style scoped lang="scss">
+@import "theme/blue.scss";
 
 .selection-dialog-filter-selection {
     display: flex;
-    // padding: 0.5rem 1rem;
+    margin-bottom: 0.25rem;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid $border-color;
 }
 </style>

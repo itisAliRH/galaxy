@@ -15,6 +15,7 @@ type SortBy = "create_time" | "update_time" | "name";
 interface Props {
     showSelectAll?: boolean;
     allSelected?: boolean;
+    intermediateSelected?: boolean;
     haveSelected?: boolean;
     selectedItems?: string[];
     showViewToggle?: boolean;
@@ -56,11 +57,13 @@ defineExpose({
 
 <template>
     <div class="list-header">
-        <BFormCheckbox v-if="showSelectAll" :checked="allSelected" @change="emit('select-all')">
-            {{ haveSelected ? `${selectedItems.length} selected` : "Select all" }}
-        </BFormCheckbox>
-
         <div class="list-header-filters">
+            <BFormCheckbox
+                v-if="showSelectAll"
+                :checked="allSelected"
+                :intermediate="intermediateSelected"
+                @change="emit('select-all')" />
+
             Sort by:
             <BButtonGroup>
                 <BButton

@@ -24,12 +24,14 @@ export interface SelectionItem {
 export interface SelectionItemNew {
     id: string;
     label: string;
-    updated: Date | string;
-    description?: string;
+    time?: Date | string;
+    update_time: Date | string;
+    details?: string;
     isLeaf: boolean;
     url: string;
     size?: number;
     variant?: SelectionState;
+    tags?: string[];
     _rowVariant?: SelectionState;
 }
 export interface ItemsProviderContext {

@@ -18,10 +18,11 @@ export function fileSourcePluginToItem(plugin: BrowsableFilesSourcePlugin): Sele
     const result = {
         id: plugin.id,
         label: plugin.label,
-        description: plugin.doc || "",
+        details: plugin.doc || "",
         isLeaf: false,
         url: plugin.uri_root,
-        updated: "",
+        update_time: "",
     };
+
     return result;
 }
