@@ -77,7 +77,7 @@ const emit = defineEmits<{
     (e: "onCancel"): void;
     (e: "onClick", record: SelectionItemNew): void;
     (e: "onOk"): void;
-    (e: "onOpen", record?: SelectionItemNew): void;
+    (e: "onOpen", record: SelectionItemNew): void;
     (e: "onSelectAll"): void;
     (e: "onUndo"): void;
 }>();
