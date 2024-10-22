@@ -15,6 +15,8 @@ import StatelessTags from "@/components/TagsMultiselect/StatelessTags.vue";
 interface Props {
     item: SelectionItemNew;
     isEncoded?: boolean;
+    leafSizeTitle?: string;
+    parentSizeTitle?: string;
     showSelectIcon?: boolean;
     leafIcon?: IconDefinition;
     folderIcon?: IconDefinition;
@@ -22,6 +24,8 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     isEncoded: false,
+    leafSizeTitle: "Size of the file",
+    parentSizeTitle: "Number of files",
     showSelectIcon: true,
     leafIcon: () => faFile,
     folderIcon: () => faFolder,
@@ -34,20 +38,6 @@ const emit = defineEmits<{
 }>();
 
 const checked = computed(() => props.item._rowVariant === SELECTION_STATES.SELECTED);
-const indeterminateChecked = computed(() => props.item._rowVariant === SELECTION_STATES.MIXED);
-
-function onSelect(item: SelectionItemNew) {
-    console.log("onSelect SelectionCard.onSelect", item);
-
-    emit("select", item);
-}
-
-function onOpen(item: SelectionItemNew) {
-    console.log("onOpen SelectionCard.onSelect", item);
-    if (!item.isLeaf) {
-        emit("open", item);
-    }
-}
 
 function formatTime(value: Date | string) {
     if (value) {
@@ -65,7 +55,15 @@ function formatTime(value: Date | string) {
     }
 }
 
-console.log("SelectionCard", props.item);
+function onSelect(item: SelectionItemNew) {
+    emit("select", item);
+}
+
+function onOpen(item: SelectionItemNew) {
+    if (!item.isLeaf) {
+        emit("open", item);
+    }
+}
 </script>
 
 <template>
@@ -75,60 +73,67 @@ console.log("SelectionCard", props.item);
             :class="{
                 'selection-card-selected': props.item._rowVariant === 'success',
             }">
-            <div class="d-flex">
-                <div class="selection-card-control">
-                    <BFormCheckbox
-                        v-if="props.showSelectIcon"
-                        class="cursor-pointer align-self-end"
-                        :checked="checked"
-                        :indeterminate="indeterminateChecked"
-                        @change="onSelect(props.item)" />
-                </div>
+            <div class="selection-card-control">
+                <BFormCheckbox
+                    v-if="props.showSelectIcon"
+                    class="cursor-pointer align-self-end"
+                    :checked="checked"
+                    @change="onSelect(props.item)" />
+            </div>
 
-                <div class="selection-card-data" @click="onSelect(props.item)">
-                    <div class="selection-card-body">
-                        <span class="selection-card-name">
-                            <pre v-if="isEncoded" :title="`label-${props.item.url}`">
+            <div class="selection-card-data" @click="onSelect(props.item)">
+                <div class="selection-card-body">
+                    <span>
+                        <pre v-if="isEncoded" :title="`label-${props.item.url}`">
                                 <code>{{ props.item.label }}</code>
                             </pre>
-                            <span v-else-if="props.item.isLeaf">
-                                <FontAwesomeIcon :icon="props.leafIcon" fixed-width size="sm" />
-                                <span :title="`label-${props.item.url}`">
-                                    {{ props.item.label }}
-                                </span>
-                            </span>
-                            <span v-else :title="`label-${props.item.url}`" @click="onOpen(props.item)">
-                                <FontAwesomeIcon :icon="props.folderIcon" fixed-width size="sm" />
-
-                                <span class="parent-title">
-                                    {{ props.item.label }}
-                                </span>
+                        <span v-else-if="props.item.isLeaf">
+                            <FontAwesomeIcon :icon="props.leafIcon" fixed-width size="sm" />
+                            <span :title="`label-${props.item.url}`">
+                                {{ props.item.label }}
                             </span>
                         </span>
+                        <span v-else :title="`label-${props.item.url}`" @click="onOpen(props.item)">
+                            <FontAwesomeIcon :icon="props.folderIcon" fixed-width size="sm" />
 
-                        <span v-if="props.item.update_time || props.item.time" class="selection-card-header-right">
-                            {{ formatTime(props.item.update_time ?? props.item.time) }}
+                            <span class="parent-title">
+                                {{ props.item.label }}
+                            </span>
                         </span>
-                    </div>
+                    </span>
 
-                    <div class="selection-card-footer">
-                        <StatelessTags
-                            v-if="(props.item.tags ?? []).length > 0"
-                            :value="props.item.tags"
-                            :disabled="true" />
-
-                        <div class="selection-card-description" :title="`details-${props.item.url}`">
-                            {{ props.item.details }}
-                        </div>
-
+                    <span v-if="props.item.update_time || props.item.time" class="selection-card-header-right">
                         <BBadge
-                            v-if="props.item.isLeaf"
+                            v-if="!props.item.isLeaf"
                             v-b-tooltip.hover.noninteractive
+                            :title="parentSizeTitle"
                             class="outline-badge cursor-pointer">
                             <FontAwesomeIcon :icon="faDatabase" fixed-width />
-                            {{ bytesToString(props.item.size || 0) }}
+                            {{ props.item.size || 0 }}
                         </BBadge>
+
+                        {{ formatTime(props.item.update_time ?? props.item.time) }}
+                    </span>
+                </div>
+
+                <div class="selection-card-footer">
+                    <StatelessTags
+                        v-if="(props.item.tags ?? []).length > 0"
+                        :value="props.item.tags"
+                        :disabled="true" />
+
+                    <div class="selection-card-description" :title="`details-${props.item.url}`">
+                        {{ props.item.details }}
                     </div>
+
+                    <BBadge
+                        v-if="props.item.isLeaf"
+                        v-b-tooltip.hover.noninteractive
+                        :title="leafSizeTitle"
+                        class="outline-badge cursor-pointer">
+                        <FontAwesomeIcon :icon="faDatabase" fixed-width />
+                        {{ bytesToString(props.item.size || 0) }}
+                    </BBadge>
                 </div>
             </div>
         </div>
@@ -157,7 +162,6 @@ console.log("SelectionCard", props.item);
 
     &.selection-card-selected {
         background-color: $brand-success;
-        color: red;
     }
 
     &:hover {
@@ -170,7 +174,6 @@ console.log("SelectionCard", props.item);
     .selection-card-container {
         height: 100%;
         display: flex;
-        flex-direction: column;
         padding: 0.5rem;
 
         .selection-card-control {
@@ -214,17 +217,6 @@ console.log("SelectionCard", props.item);
                 justify-content: space-between;
                 align-items: end;
                 padding-top: 0.25rem;
-
-                .selection-card-actions {
-                    display: flex;
-                    gap: 0.25rem;
-
-                    @container (max-width: #{$breakpoint-md}) {
-                        .compact-view {
-                            display: none;
-                        }
-                    }
-                }
             }
         }
     }
