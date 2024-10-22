@@ -78,6 +78,7 @@ const showFTPHelper = ref(false);
 const selectAllIcon = ref<SelectionState>(SELECTION_STATES.UNSELECTED);
 const urlTracker = ref(new UrlTracker(""));
 const totalItems = ref(0);
+const selectionDialog = ref();
 
 const fields = computed(() => {
     const fields = [];
@@ -179,7 +180,6 @@ function selectDirectoryRecursive(record: SelectionItemNew) {
                     selectedDirectories.value.push(subRecord);
                 }
             });
-            totalItems.value = incoming.totalMatches;
             isBusy.value = false;
         });
     }
@@ -237,6 +237,8 @@ function open(record: SelectionItemNew) {
 
 /** Performs server request to retrieve data records **/
 function load(record?: SelectionItemNew) {
+    selectionDialog.value.resetPagination();
+
     currentDirectory.value = urlTracker.value.getUrl(record);
     showFTPHelper.value = record?.url === "gxftp://";
     filter.value = undefined;
@@ -413,6 +415,7 @@ onMounted(() => {
 
 <template>
     <SelectionDialog
+        ref="selectionDialog"
         :disable-ok="okButtonDisabled"
         :error-message="errorMessage"
         :file-mode="fileMode"
