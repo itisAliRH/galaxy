@@ -15,7 +15,6 @@ import {
     type ItemsProvider,
     type ItemsProviderContext,
     SELECTION_STATES,
-    type SelectionItem,
     type SelectionItemNew,
     type SelectionState,
 } from "@/components/SelectionDialog/selectionTypes";
@@ -79,18 +78,6 @@ const selectAllIcon = ref<SelectionState>(SELECTION_STATES.UNSELECTED);
 const urlTracker = ref(new UrlTracker(""));
 const totalItems = ref(0);
 const selectionDialog = ref();
-
-const fields = computed(() => {
-    const fields = [];
-    fields.push({ key: "label" });
-    if (showDetails.value) {
-        fields.push({ key: "details" });
-    }
-    if (showTime.value) {
-        fields.push({ key: "time" });
-    }
-    return fields;
-});
 
 const fileMode = computed(() => props.mode == "file");
 
@@ -346,16 +333,6 @@ function filterByMode(results: RemoteEntry[]): RemoteEntry[] {
 }
 
 function entryToRecord(entry: RemoteEntry): SelectionItemNew {
-    // const result = {
-    //     id: entry.uri,
-    //     label: entry.name,
-    //     time: entry.class === "File" ? entry.ctime : "",
-    //     details: entry.class === "File" ? entry.ctime : "",
-    //     isLeaf: entry.class === "File",
-    //     url: entry.uri,
-    //     size: entry.class === "File" ? entry.size : 0,
-    // };
-
     const result: SelectionItemNew = {
         id: entry.uri,
         label: entry.name,
@@ -419,7 +396,6 @@ onMounted(() => {
         :disable-ok="okButtonDisabled"
         :error-message="errorMessage"
         :file-mode="fileMode"
-        :fields="fields"
         :is-busy="isBusy"
         :items="items"
         :items-provider="itemsProvider"
