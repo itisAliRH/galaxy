@@ -10,7 +10,7 @@ import {
     type ItemsProvider,
     type ItemsProviderContext,
     SELECTION_STATES,
-    type SelectionItemNew,
+    type SelectionItem,
     type SelectionState,
 } from "@/components/SelectionDialog/selectionTypes";
 import type Filtering from "@/utils/filtering";
@@ -28,7 +28,7 @@ interface Props {
     sortKeys?: SortKey[];
     isBusy?: boolean;
     isEncoded?: boolean;
-    items?: SelectionItemNew[];
+    items?: SelectionItem[];
     itemsProvider?: ItemsProvider;
     providerUrl?: string;
     totalItems?: number;
@@ -75,9 +75,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
     (e: "onCancel"): void;
-    (e: "onClick", record: SelectionItemNew): void;
+    (e: "onClick", record: SelectionItem): void;
     (e: "onOk"): void;
-    (e: "onOpen", record: SelectionItemNew): void;
+    (e: "onOpen", record: SelectionItem): void;
     (e: "onSelectAll"): void;
     (e: "onUndo"): void;
 }>();
@@ -87,7 +87,7 @@ const listHeader = ref<any | null>(null);
 const currentPage = ref(1);
 const perPage = ref(25);
 const showAdvancedSearch = ref(false);
-const filteredItems = ref<SelectionItemNew[]>(props.items);
+const filteredItems = ref<SelectionItem[]>(props.items);
 const sortDesc = computed(() => (listHeader.value && listHeader.value.sortDesc) ?? true);
 const sortBy = computed(() => (listHeader.value && listHeader.value.sortBy) || "update_time");
 const allSelected = computed(() => props.selectAllVariant === SELECTION_STATES.SELECTED);

@@ -8,13 +8,13 @@ import {
     type ItemsProvider,
     type ItemsProviderContext,
     SELECTION_STATES,
-    type SelectionItemNew,
+    type SelectionItem,
 } from "@/components/SelectionDialog/selectionTypes";
 import { errorMessageAsString } from "@/utils/simple-error";
 
 import SelectionDialog from "@/components/SelectionDialog/SelectionDialog.vue";
 
-interface HistoryRecord extends SelectionItemNew {
+interface HistoryRecord extends SelectionItem {
     size: number;
 }
 
@@ -32,7 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
     (e: "reload"): void;
     (e: "onClose"): void;
-    (e: "onSelect", datasets: SelectionItemNew[]): void;
+    (e: "onSelect", datasets: SelectionItem[]): void;
 }>();
 
 const selectionDialog = ref();
@@ -46,8 +46,8 @@ const submitting = ref(false);
 const allSelected = ref(false);
 const datasetsVisible = ref(false);
 
-const items = ref<SelectionItemNew[]>([]);
-const selected = ref<SelectionItemNew[]>([]);
+const items = ref<SelectionItem[]>([]);
+const selected = ref<SelectionItem[]>([]);
 
 const itemsProvider = ref<ItemsProvider>(historiesProvider);
 
@@ -89,7 +89,7 @@ function historyEntryToRecord(entry: HistorySummary): HistoryRecord {
     return result;
 }
 
-function datasetEntryToRecord(entry: HDASummary): SelectionItemNew {
+function datasetEntryToRecord(entry: HDASummary): SelectionItem {
     const result = {
         id: entry.id,
         label: entry.name || "",
@@ -128,7 +128,7 @@ function checkIfAllSelected(): boolean {
     );
 }
 
-async function historiesProvider(ctx: ItemsProviderContext, url?: string): Promise<SelectionItemNew[]> {
+async function historiesProvider(ctx: ItemsProviderContext, url?: string): Promise<SelectionItem[]> {
     loading.value = true;
 
     try {
@@ -226,7 +226,7 @@ async function datasetsProvider(ctx: ItemsProviderContext, selectedHistory: Hist
     }
 }
 
-function onHistoryClick(item: SelectionItemNew) {
+function onHistoryClick(item: SelectionItem) {
     if (!item.isLeaf) {
         selectionDialog.value?.resetFilter();
         selectionDialog.value?.resetPagination();
@@ -235,7 +235,7 @@ function onHistoryClick(item: SelectionItemNew) {
     }
 }
 
-async function onDatasetClick(item: SelectionItemNew) {
+async function onDatasetClick(item: SelectionItem) {
     if (item.isLeaf) {
         if (selected.value.findIndex((i) => i.id === item.id) !== -1) {
             selected.value = selected.value.filter((i) => i.id !== item.id);

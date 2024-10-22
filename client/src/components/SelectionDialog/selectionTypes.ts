@@ -9,15 +9,6 @@ export type SelectionState = (typeof SELECTION_STATES)[keyof typeof SELECTION_ST
 export interface SelectionItem {
     id: string;
     label: string;
-    details: string;
-    isLeaf: boolean;
-    url: string;
-    _rowVariant?: SelectionState;
-}
-
-export interface SelectionItemNew {
-    id: string;
-    label: string;
     time?: Date | string;
     update_time: Date | string;
     details?: string;
@@ -37,4 +28,4 @@ export interface ItemsProviderContext {
     sortDesc?: boolean;
 }
 
-export type ItemsProvider = (ctx: ItemsProviderContext) => Promise<SelectionItemNew[]>;
+export type ItemsProvider = (ctx: ItemsProviderContext) => Promise<SelectionItem[]>;

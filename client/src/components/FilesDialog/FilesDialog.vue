@@ -15,7 +15,7 @@ import {
     type ItemsProvider,
     type ItemsProviderContext,
     SELECTION_STATES,
-    type SelectionItemNew,
+    type SelectionItem,
     type SelectionState,
 } from "@/components/SelectionDialog/selectionTypes";
 import { useConfig } from "@/composables/config";
@@ -42,7 +42,7 @@ interface FilesDialogProps {
     /** Whether to show only writable sources */
     requireWritable?: boolean;
     /** Optional selected item to start browsing from */
-    selectedItem?: SelectionItemNew;
+    selectedItem?: SelectionItem;
 }
 
 const props = withDefaults(defineProps<FilesDialogProps>(), {
@@ -60,10 +60,10 @@ const { config, isConfigLoaded } = useConfig();
 const selectionModel = ref<Model>(new Model({ multiple: props.multiple }));
 
 const allSelected = ref(false);
-const selectedDirectories = ref<SelectionItemNew[]>([]);
+const selectedDirectories = ref<SelectionItem[]>([]);
 const errorMessage = ref<string>();
 const filter = ref();
-const items = ref<SelectionItemNew[]>([]);
+const items = ref<SelectionItem[]>([]);
 const itemsProvider = ref<ItemsProvider>();
 const modalShow = ref(true);
 const optionsShow = ref(false);
@@ -72,7 +72,7 @@ const hasValue = ref(false);
 const showTime = ref(true);
 const showDetails = ref(true);
 const isBusy = ref(false);
-const currentDirectory = ref<SelectionItemNew>();
+const currentDirectory = ref<SelectionItem>();
 const showFTPHelper = ref(false);
 const selectAllIcon = ref<SelectionState>(SELECTION_STATES.UNSELECTED);
 const urlTracker = ref(new UrlTracker(""));
@@ -86,7 +86,7 @@ const okButtonDisabled = computed(
 );
 
 /** Collects selected datasets in value array **/
-function clicked(record: SelectionItemNew) {
+function clicked(record: SelectionItem) {
     // ignore the click during directory mode
     if (!fileMode.value) {
         return;
@@ -101,7 +101,7 @@ function clicked(record: SelectionItemNew) {
     formatRows();
 }
 
-function selectSingleRecord(record: SelectionItemNew, selectOnly = false) {
+function selectSingleRecord(record: SelectionItem, selectOnly = false) {
     const selected = selectionModel.value.exists(record.id);
     if (selected) {
         unselectPath(record.url, true);
@@ -146,7 +146,7 @@ function unselectPath(path: string, unselectOnlyAboveDirectories = false, unsele
     }
 }
 
-function selectDirectoryRecursive(record: SelectionItemNew) {
+function selectDirectoryRecursive(record: SelectionItem) {
     // if directory is `selected` or `mixed` unselect everything
     if (isDirectorySelected(record.id) || selectionModel.value.pathExists(record.url)) {
         unselectPath(record.url, false, record.id);
@@ -218,12 +218,12 @@ function checkIfAllSelected(): boolean {
     return isAllSelected;
 }
 
-function open(record: SelectionItemNew) {
+function open(record: SelectionItem) {
     load(record);
 }
 
 /** Performs server request to retrieve data records **/
-function load(record?: SelectionItemNew) {
+function load(record?: SelectionItem) {
     selectionDialog.value.resetPagination();
 
     currentDirectory.value = urlTracker.value.getUrl(record);
@@ -301,7 +301,7 @@ function shouldUseItemsProvider(): boolean {
 /**
  *  Fetches items from the server using server-side pagination and filtering.
  **/
-async function provideItems(ctx: ItemsProviderContext, url?: string): Promise<SelectionItemNew[]> {
+async function provideItems(ctx: ItemsProviderContext, url?: string): Promise<SelectionItem[]> {
     isBusy.value = true;
     try {
         if (!url) {
@@ -332,8 +332,8 @@ function filterByMode(results: RemoteEntry[]): RemoteEntry[] {
     return results;
 }
 
-function entryToRecord(entry: RemoteEntry): SelectionItemNew {
-    const result: SelectionItemNew = {
+function entryToRecord(entry: RemoteEntry): SelectionItem {
+    const result: SelectionItem = {
         id: entry.uri,
         label: entry.name,
         update_time: entry.class === "File" ? entry.ctime : "",

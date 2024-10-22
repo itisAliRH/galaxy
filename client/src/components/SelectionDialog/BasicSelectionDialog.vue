@@ -2,7 +2,7 @@
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { computed, onMounted, ref } from "vue";
 
-import { type SelectionItemNew } from "@/components/SelectionDialog/selectionTypes";
+import { type SelectionItem } from "@/components/SelectionDialog/selectionTypes";
 import { errorMessageAsString } from "@/utils/simple-error";
 
 import SelectionDialog from "@/components/SelectionDialog/SelectionDialog.vue";
@@ -27,12 +27,12 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
     (e: "onCancel"): void;
-    (e: "onOk", results: SelectionItemNew): void;
+    (e: "onOk", results: SelectionItem): void;
     (e: "onUpload"): void;
 }>();
 
 const errorMessage = ref("");
-const items = ref<SelectionItemNew[]>([]);
+const items = ref<SelectionItem[]>([]);
 const modalShow = ref(true);
 const optionsShow = ref(false);
 const showTime = ref(false);
@@ -73,7 +73,7 @@ async function load() {
     }
 }
 
-function onClick(record: SelectionItemNew) {
+function onClick(record: SelectionItem) {
     emit("onOk", record);
 }
 

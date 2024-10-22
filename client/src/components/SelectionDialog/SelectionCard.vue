@@ -8,12 +8,12 @@ import { computed } from "vue";
 
 import { bytesToString } from "@/utils/utils";
 
-import { SELECTION_STATES, type SelectionItemNew } from "./selectionTypes";
+import { SELECTION_STATES, type SelectionItem } from "./selectionTypes";
 
 import StatelessTags from "@/components/TagsMultiselect/StatelessTags.vue";
 
 interface Props {
-    item: SelectionItemNew;
+    item: SelectionItem;
     isEncoded?: boolean;
     leafSizeTitle?: string;
     parentSizeTitle?: string;
@@ -32,8 +32,8 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-    (e: "open", item: SelectionItemNew): void;
-    (e: "select", item: SelectionItemNew): void;
+    (e: "open", item: SelectionItem): void;
+    (e: "select", item: SelectionItem): void;
     (e: "update-filter", key: string, value: any): void;
 }>();
 
@@ -55,11 +55,11 @@ function formatTime(value: Date | string) {
     }
 }
 
-function onSelect(item: SelectionItemNew) {
+function onSelect(item: SelectionItem) {
     emit("select", item);
 }
 
-function onOpen(item: SelectionItemNew) {
+function onOpen(item: SelectionItem) {
     if (!item.isLeaf) {
         emit("open", item);
     }

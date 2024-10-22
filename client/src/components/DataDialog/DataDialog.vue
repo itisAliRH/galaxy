@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { BButton } from "bootstrap-vue";
 import Vue, { onMounted, ref, watch } from "vue";
 
-import type { SelectionItemNew } from "@/components/SelectionDialog/selectionTypes";
+import type { SelectionItem } from "@/components/SelectionDialog/selectionTypes";
 import { useGlobalUploadModal } from "@/composables/globalUploadModal";
 import { getAppRoot } from "@/onload/loadConfig";
 import { errorMessageAsString } from "@/utils/simple-error";
@@ -56,7 +56,7 @@ const { openGlobalUploadModal } = useGlobalUploadModal();
 
 const errorMessage = ref("");
 const filter = ref("");
-const items = ref<SelectionItemNew[]>([]);
+const items = ref<SelectionItem[]>([]);
 const hasValue = ref(false);
 const modalShow = ref(true);
 const optionsShow = ref(true);

@@ -2,7 +2,7 @@
 import axios from "axios";
 import { onMounted, ref } from "vue";
 
-import { type SelectionItemNew } from "@/components/SelectionDialog/selectionTypes";
+import { type SelectionItem } from "@/components/SelectionDialog/selectionTypes";
 import { withPrefix } from "@/utils/redirect";
 import { errorMessageAsString } from "@/utils/simple-error";
 
@@ -15,7 +15,7 @@ interface HistoryItem {
 }
 
 interface Props {
-    callback?: (results: SelectionItemNew) => void;
+    callback?: (results: SelectionItem) => void;
     history: string;
     modalStatic?: boolean;
 }
@@ -27,7 +27,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
     (e: "onCancel"): void;
-    (e: "onOk", results: SelectionItemNew): void;
+    (e: "onOk", results: SelectionItem): void;
     (e: "onUpload"): void;
 }>();
 
@@ -36,7 +36,7 @@ const items = ref([]);
 const modalShow = ref(true);
 const optionsShow = ref(false);
 
-function onClick(record: SelectionItemNew) {
+function onClick(record: SelectionItem) {
     modalShow.value = false;
     props.callback(record);
     emit("onOk", record);
