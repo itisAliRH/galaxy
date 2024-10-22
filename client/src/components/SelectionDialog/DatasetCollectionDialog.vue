@@ -2,7 +2,7 @@
 import axios from "axios";
 import { onMounted, ref } from "vue";
 
-import { type SelectionItem } from "@/components/SelectionDialog/selectionTypes";
+import { type SelectionItemNew } from "@/components/SelectionDialog/selectionTypes";
 import { withPrefix } from "@/utils/redirect";
 import { errorMessageAsString } from "@/utils/simple-error";
 
@@ -15,7 +15,7 @@ interface HistoryItem {
 }
 
 interface Props {
-    callback?: (results: SelectionItem) => void;
+    callback?: (results: SelectionItemNew) => void;
     history: string;
     modalStatic?: boolean;
 }
@@ -27,7 +27,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
     (e: "onCancel"): void;
-    (e: "onOk", results: SelectionItem): void;
+    (e: "onOk", results: SelectionItemNew): void;
     (e: "onUpload"): void;
 }>();
 
@@ -36,7 +36,7 @@ const items = ref([]);
 const modalShow = ref(true);
 const optionsShow = ref(false);
 
-function onClick(record: SelectionItem) {
+function onClick(record: SelectionItemNew) {
     modalShow.value = false;
     props.callback(record);
     emit("onOk", record);
@@ -81,7 +81,6 @@ onMounted(() => {
         :options-show="optionsShow"
         :modal-show="modalShow"
         :modal-static="modalStatic"
-        leaf-icon="fa fa-folder"
         :items="items"
         @onCancel="onCancel"
         @onClick="onClick" />
