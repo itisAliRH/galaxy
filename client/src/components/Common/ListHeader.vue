@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { faAngleDown, faAngleUp, faBars, faGripVertical } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { BButton, BFormCheckbox } from "bootstrap-vue";
+import { BButton, BButtonGroup, BFormCheckbox } from "bootstrap-vue";
 import { computed, ref } from "vue";
 
 import { defaultSortKeys, type ListView, type SortBy, type SortKey } from "@/components/Common";
@@ -61,22 +61,24 @@ defineExpose({
                 :intermediate="intermediateSelected"
                 @change="emit('select-all')" />
 
-            Sort by:
-            <BButtonGroup>
-                <BButton
-                    v-for="sortKey in sortKeys"
-                    :id="`sortby-${sortKey.key}`"
-                    :key="`sortby-${sortKey.key}`"
-                    v-b-tooltip.hover
-                    size="sm"
-                    :title="sortDesc ? `Sort by ${sortKey.label} ascending` : `Sort by ${sortKey.label} descending`"
-                    :pressed="sortBy === sortKey.key"
-                    variant="outline-primary"
-                    @click="onSort(sortKey.key)">
-                    <FontAwesomeIcon v-show="sortBy === sortKey.key" :icon="sortDesc ? faAngleDown : faAngleUp" />
-                    {{ sortKey.label }}
-                </BButton>
-            </BButtonGroup>
+            <slot v-if="sortKeys.length > 0">
+                Sort by:
+                <BButtonGroup>
+                    <BButton
+                        v-for="sortKey in sortKeys"
+                        :id="`sortby-${sortKey.key}`"
+                        :key="`sortby-${sortKey.key}`"
+                        v-b-tooltip.hover
+                        size="sm"
+                        :title="sortDesc ? `Sort by ${sortKey.label} ascending` : `Sort by ${sortKey.label} descending`"
+                        :pressed="sortBy === sortKey.key"
+                        variant="outline-primary"
+                        @click="onSort(sortKey.key)">
+                        <FontAwesomeIcon v-show="sortBy === sortKey.key" :icon="sortDesc ? faAngleDown : faAngleUp" />
+                        {{ sortKey.label }}
+                    </BButton>
+                </BButtonGroup>
+            </slot>
 
             <slot name="extra-filter" />
         </div>
