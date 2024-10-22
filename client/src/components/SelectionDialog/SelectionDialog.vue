@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { type IconDefinition, library } from "@fortawesome/fontawesome-svg-core";
-import { faCheckSquare, faMinusSquare, faSquare } from "@fortawesome/free-regular-svg-icons";
-import { faCaretLeft, faCheck, faFolder, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
+import { type IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { faCaretLeft, faCheck, faFile, faFolder, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { BAlert, BButton, BModal, BOverlay, BPagination } from "bootstrap-vue";
 import { computed, ref, watch } from "vue";
 
+import { defaultSortKeys, type SortKey } from "@/components/Common";
 import {
-    type FieldEntry,
     type ItemsProvider,
     type ItemsProviderContext,
     SELECTION_STATES,
@@ -16,29 +15,24 @@ import {
 } from "@/components/SelectionDialog/selectionTypes";
 import type Filtering from "@/utils/filtering";
 
-import SelectionCard from "./SelectionCard.vue";
 import FilterMenu from "@/components/Common/FilterMenu.vue";
 import Heading from "@/components/Common/Heading.vue";
 import ListHeader from "@/components/Common/ListHeader.vue";
 import DataDialogSearch from "@/components/SelectionDialog/DataDialogSearch.vue";
-
-library.add(faCaretLeft, faCheck, faCheckSquare, faFolder, faMinusSquare, faSpinner, faSquare, faTimes);
-
-const LABEL_FIELD: FieldEntry = { key: "label", sortable: true };
-const SELECT_ICON_FIELD: FieldEntry = { key: "__select_icon__", label: "", sortable: false };
+import SelectionCard from "@/components/SelectionDialog/SelectionCard.vue";
 
 interface Props {
     disableOk?: boolean;
     errorMessage?: string;
     fileMode?: boolean;
-    fields?: FieldEntry[];
+    sortKeys?: SortKey[];
     isBusy?: boolean;
     isEncoded?: boolean;
     items?: SelectionItemNew[];
     itemsProvider?: ItemsProvider;
     providerUrl?: string;
     totalItems?: number;
-    leafIcon?: string;
+    leafIcon?: IconDefinition;
     folderIcon?: IconDefinition;
     modalShow?: boolean;
     modalStatic?: boolean;
@@ -50,21 +44,21 @@ interface Props {
     title?: string;
     searchTitle?: string;
     okButtonText?: string;
-    filterClass?: Filtering<any>;
+    filterClass?: Filtering<unknown>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     disableOk: false,
     errorMessage: "",
     fileMode: true,
-    fields: () => [],
+    sortKeys: () => defaultSortKeys,
     isBusy: false,
     isEncoded: false,
     items: () => [],
     itemsProvider: undefined,
     providerUrl: undefined,
     totalItems: 0,
-    leafIcon: "fa fa-file-o",
+    leafIcon: () => faFile,
     folderIcon: () => faFolder,
     modalShow: true,
     modalStatic: false,
@@ -73,7 +67,7 @@ const props = withDefaults(defineProps<Props>(), {
     undoShow: false,
     selectAllVariant: SELECTION_STATES.UNSELECTED,
     showSelectIcon: false,
-    title: "",
+    title: undefined,
     searchTitle: undefined,
     okButtonText: "Select",
     filterClass: undefined,
@@ -89,21 +83,18 @@ const emit = defineEmits<{
 }>();
 
 const filter = ref("");
+const listHeader = ref<any | null>(null);
 const currentPage = ref(1);
 const perPage = ref(25);
 const showAdvancedSearch = ref(false);
-const filteredItems = ref<SelectionItemNew[]>([]);
-
+const filteredItems = ref<SelectionItemNew[]>(props.items);
+const sortDesc = computed(() => (listHeader.value && listHeader.value.sortDesc) ?? true);
+const sortBy = computed(() => (listHeader.value && listHeader.value.sortBy) || "update_time");
+const allSelected = computed(() => props.selectAllVariant === SELECTION_STATES.SELECTED);
+const intermediateSelected = computed(() => props.selectAllVariant === SELECTION_STATES.MIXED);
 const okButtonText = computed(() => {
     return props.okButtonText ? props.okButtonText : props.fileMode ? "Select" : "Select this folder";
 });
-
-/** Resets pagination when a filter/search word is entered **/
-function filtered(items: SelectionItemNew[]) {
-    if (props.itemsProvider === undefined) {
-        resetPagination();
-    }
-}
 
 function resetFilter() {
     filter.value = "";
@@ -113,36 +104,38 @@ function resetPagination() {
     currentPage.value = 1;
 }
 
-defineExpose({
-    resetFilter,
-    resetPagination,
-});
-
 async function fetchItems() {
     if (props.itemsProvider) {
         const context: ItemsProviderContext = {
             currentPage: currentPage.value,
             perPage: perPage.value,
             filter: filter.value,
+            sortBy: sortBy.value,
+            sortDesc: sortDesc.value,
         };
-        const is = await props.itemsProvider(context);
-        filteredItems.value = is;
+
+        filteredItems.value = await props.itemsProvider(context);
     }
 }
 
 watch(
     () => props.items,
     () => {
-        if (props.itemsProvider !== undefined) {
-            resetPagination();
-        }
+        filteredItems.value = props.items.slice(
+            (currentPage.value - 1) * perPage.value,
+            currentPage.value * perPage.value
+        );
     }
 );
 
-if (props.itemsProvider !== undefined) {
-    fetchItems();
-}
-
+watch(
+    () => [props.itemsProvider, currentPage.value, perPage.value, filter.value, sortBy.value, sortDesc.value],
+    () => {
+        if (props.itemsProvider !== undefined) {
+            fetchItems();
+        }
+    }
+);
 watch(
     () => props.providerUrl,
     () => {
@@ -152,6 +145,11 @@ watch(
         }
     }
 );
+
+defineExpose({
+    resetFilter,
+    resetPagination,
+});
 </script>
 
 <template>
@@ -162,6 +160,8 @@ watch(
         modal-class="selection-dialog-modal"
         header-class="selection-dialog-header"
         visible
+        :no-close-on-esc="!disableOk"
+        :no-close-on-backdrop="!disableOk"
         :static="modalStatic"
         :title="title"
         @hide="emit('onCancel')">
@@ -191,9 +191,8 @@ watch(
                     <div class="selection-dialog-filter-selection">
                         <ListHeader
                             ref="listHeader"
-                            show-view-toggle
-                            :intermediate-selected="selectAllVariant === SELECTION_STATES.MIXED"
-                            :all-selected="selectAllVariant === SELECTION_STATES.SELECTED"
+                            :intermediate-selected="intermediateSelected"
+                            :all-selected="allSelected"
                             :show-select-all="props.showSelectIcon && props.multiple"
                             @select-all="emit('onSelectAll')" />
                     </div>
@@ -219,13 +218,14 @@ watch(
             </div>
 
             <BOverlay :show="!optionsShow || isBusy">
-                <div v-for="item in items" :key="item.id">
+                <div v-for="item in filteredItems" :key="item.id">
                     <SelectionCard
                         :id="`selection-card-item-${item.id}`"
                         :show-select-icon="props.showSelectIcon"
                         :item="item"
+                        :is-encoded="props.isEncoded"
                         @select="emit('onClick', $event)"
-                        @open="emit('onOpen')" />
+                        @open="emit('onOpen', $event)" />
                 </div>
             </BOverlay>
         </div>
