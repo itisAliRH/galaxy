@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { library } from "@fortawesome/fontawesome-svg-core";
 import { faAngleDown, faAngleUp, faBars, faGripVertical } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { BButton, BFormCheckbox } from "bootstrap-vue";
@@ -7,8 +6,6 @@ import { computed, ref } from "vue";
 
 import { defaultSortKeys, type ListView, type SortBy, type SortKey } from "@/components/Common";
 import { useUserStore } from "@/stores/userStore";
-
-library.add(faAngleDown, faAngleUp, faBars, faGripVertical);
 
 interface Props {
     showSelectAll?: boolean;
