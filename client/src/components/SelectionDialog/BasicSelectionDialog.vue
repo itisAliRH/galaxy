@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, type Ref, ref } from "vue";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { computed, onMounted, ref } from "vue";
 
-import { type SelectionItem } from "@/components/SelectionDialog/selectionTypes";
+import { type SelectionItemNew } from "@/components/SelectionDialog/selectionTypes";
 import { errorMessageAsString } from "@/utils/simple-error";
 
 import SelectionDialog from "@/components/SelectionDialog/SelectionDialog.vue";
@@ -11,7 +12,7 @@ interface Props {
     getData: () => Promise<object[]>;
     isEncoded?: boolean;
     labelKey?: string;
-    leafIcon?: string;
+    leafIcon?: IconDefinition;
     timeKey?: string;
     title: string;
 }
@@ -20,18 +21,18 @@ const props = withDefaults(defineProps<Props>(), {
     detailsKey: "",
     isEncoded: false,
     labelKey: "id",
-    leafIcon: "",
+    leafIcon: undefined,
     timeKey: "update_time",
 });
 
 const emit = defineEmits<{
     (e: "onCancel"): void;
-    (e: "onOk", results: SelectionItem): void;
+    (e: "onOk", results: SelectionItemNew): void;
     (e: "onUpload"): void;
 }>();
 
 const errorMessage = ref("");
-const items: Ref<Array<SelectionItem>> = ref([]);
+const items = ref<SelectionItemNew[]>([]);
 const modalShow = ref(true);
 const optionsShow = ref(false);
 const showTime = ref(false);
@@ -56,11 +57,12 @@ async function load() {
         items.value = incoming.map((item: any) => {
             const timeStamp = item[props.timeKey];
             showTime.value = !!timeStamp;
+
             return {
                 id: item.id,
                 label: item[props.labelKey] || null,
                 details: item[props.detailsKey] || null,
-                time: timeStamp || null,
+                update_time: timeStamp || null,
                 isLeaf: true,
                 url: "",
             };
@@ -69,6 +71,10 @@ async function load() {
     } catch (err) {
         errorMessage.value = errorMessageAsString(err);
     }
+}
+
+function onClick(record: SelectionItemNew) {
+    emit("onOk", record);
 }
 
 onMounted(() => load());
@@ -85,5 +91,5 @@ onMounted(() => load());
         :items="items"
         :title="title"
         @onCancel="emit('onCancel')"
-        @onClick="emit('onOk', $event)" />
+        @onClick="onClick" />
 </template>
