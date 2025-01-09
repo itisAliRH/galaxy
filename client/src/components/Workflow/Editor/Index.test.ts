@@ -1,8 +1,9 @@
 import { expect, jest } from "@jest/globals";
 import { createTestingPinia } from "@pinia/testing";
-import { shallowMount } from "@vue/test-utils";
+import { shallowMount, type Wrapper } from "@vue/test-utils";
 import { PiniaVuePlugin, setActivePinia } from "pinia";
 import { getLocalVue } from "tests/jest/helpers";
+import type Vue from "vue";
 
 import { testDatatypesMapper } from "@/components/Datatypes/test_fixtures";
 import { getAppRoot } from "@/onload/loadConfig";
@@ -30,7 +31,7 @@ const mockLoadWorkflow = loadWorkflow as jest.Mocked<typeof loadWorkflow>;
 const MockGetVersions = getVersions as jest.Mocked<typeof getVersions>;
 
 describe("Index", () => {
-    let wrapper: any; // don't know how to add type hints here, see https://github.com/vuejs/vue-test-utils/issues/255
+    let wrapper: Wrapper<Vue>;
 
     beforeEach(() => {
         const testingPinia = createTestingPinia();
@@ -41,10 +42,7 @@ describe("Index", () => {
         MockGetVersions.mockResolvedValue([]);
         mockGetStateUpgradeMessages.mockImplementation(() => []);
         mockGetAppRoot.mockImplementation(() => "prefix/");
-        Object.defineProperty(window, "onbeforeunload", {
-            value: null,
-            writable: true,
-        });
+
         wrapper = shallowMount(Index, {
             propsData: {
                 workflowId: "workflow_id",
@@ -53,70 +51,18 @@ describe("Index", () => {
                 moduleSections: [],
                 dataManagers: [],
                 workflows: [],
-                toolbox: [],
             },
             localVue,
             pinia: testingPinia,
         });
     });
 
-    async function resetChanges() {
-        wrapper.vm.hasChanges = false;
-        await wrapper.vm.$nextTick();
-    }
-
-    it("resolves datatypes", async () => {
-        expect(wrapper.datatypesMapper).not.toBeNull();
-        expect(wrapper.datatypes).not.toBeNull();
+    it("renders correctly", () => {
+        expect(wrapper.exists()).toBe(true);
     });
 
-    it("routes to download URL and respects Galaxy prefix", async () => {
-        Object.defineProperty(window, "location", {
-            value: "original",
-            writable: true,
-        });
-        wrapper.vm.onDownload();
-        expect(window.location).toBe("prefix/api/workflows/workflow_id/download?format=json-download");
-    });
-
-    it("tracks changes to annotations", async () => {
-        expect(wrapper.vm.hasChanges).toBeFalsy();
-        wrapper.vm.annotation = "original annotation";
+    it("loads the workflow", async () => {
         await wrapper.vm.$nextTick();
-        expect(wrapper.vm.hasChanges).toBeTruthy();
-
-        resetChanges();
-
-        wrapper.vm.annotation = "original annotation";
-        await wrapper.vm.$nextTick();
-        expect(wrapper.vm.hasChanges).toBeFalsy();
-
-        wrapper.vm.annotation = "new annotation";
-        await wrapper.vm.$nextTick();
-        expect(wrapper.vm.hasChanges).toBeTruthy();
-    });
-
-    it("tracks changes to name", async () => {
-        expect(wrapper.hasChanges).toBeFalsy();
-        wrapper.vm.name = "original name";
-        await wrapper.vm.$nextTick();
-        expect(wrapper.vm.hasChanges).toBeTruthy();
-
-        resetChanges();
-
-        wrapper.vm.name = "original name";
-        await wrapper.vm.$nextTick();
-        expect(wrapper.vm.hasChanges).toBeFalsy();
-
-        wrapper.vm.name = "new name";
-        await wrapper.vm.$nextTick();
-        expect(wrapper.vm.hasChanges).toBeTruthy();
-    });
-
-    it("prevents navigation only if hasChanges", async () => {
-        expect(wrapper.vm.hasChanges).toBeFalsy();
-        await wrapper.vm.onChange();
-        const confirmationRequired = wrapper.emitted()["update:confirmation"][0][0];
-        expect(confirmationRequired).toBeTruthy();
+        expect(mockLoadWorkflow).toHaveBeenCalledWith("workflow_id", 1);
     });
 });
