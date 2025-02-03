@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { faUpload } from "@fortawesome/free-solid-svg-icons";
 import { BButton } from "bootstrap-vue";
-import { onMounted, type Ref, ref, watch } from "vue";
-import Vue from "vue";
+import Vue, { onMounted, ref, watch } from "vue";
 
+import { type SelectionItem } from "@/components/SelectionDialog/selectionTypes";
 import { useGlobalUploadModal } from "@/composables/globalUploadModal";
 import { getAppRoot } from "@/onload/loadConfig";
 import { errorMessageAsString } from "@/utils/simple-error";
@@ -14,15 +14,9 @@ import { UrlTracker } from "./utilities";
 
 import SelectionDialog from "@/components/SelectionDialog/SelectionDialog.vue";
 
-interface Record {
-    id: string;
-    isLeaf: boolean;
-    url: string;
-}
-
 interface Props {
     allowUpload?: boolean;
-    callback?: (results: Array<Record>) => void;
+    callback?: (results: SelectionItem[]) => void;
     filterOkState?: boolean;
     filterByTypeIds?: string[];
     format?: string;
@@ -47,23 +41,24 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
     (e: "onCancel"): void;
-    (e: "onOk", results: Array<Record>): void;
+    (e: "onOk", results: SelectionItem[]): void;
     (e: "onUpload"): void;
 }>();
 
 const { openGlobalUploadModal } = useGlobalUploadModal();
 
 const errorMessage = ref("");
-const filter = ref("");
-const items: Ref<Array<Record>> = ref([]);
+const items = ref<SelectionItem[]>([]);
 const hasValue = ref(false);
 const modalShow = ref(true);
 const optionsShow = ref(true);
 const undoShow = ref(false);
 
+const selectionDialog = ref();
+const currentDirectory = ref<SelectionItem>();
 const services = new Services();
 const model = new Model({ multiple: props.multiple, format: props.format });
-let urlTracker = new UrlTracker(getHistoryUrl());
+const urlTracker = ref(new UrlTracker(getHistoryUrl()));
 
 /** Specifies data columns to be shown in the dialog's table */
 const fields = [
@@ -111,7 +106,7 @@ function onCancel() {
 }
 
 /** Collects selected datasets in value array **/
-function onClick(record: Record) {
+function onClick(record: SelectionItem) {
     if (record.isLeaf) {
         model.add(record);
         hasValue.value = model.count() > 0;
@@ -121,7 +116,8 @@ function onClick(record: Record) {
             onOk();
         }
     } else {
-        load(record.url);
+        currentDirectory.value = urlTracker.value.getUrl({ ...record, parentPage: selectionDialog.value.currentPage });
+        load();
     }
 }
 
@@ -134,8 +130,13 @@ function onOk() {
 }
 
 /** On clicking folder name div: overloader for the @click.stop in DataDialogTable **/
-function onOpen(record: Record) {
-    load(record.url);
+function onOpen(record: SelectionItem) {
+    currentDirectory.value = urlTracker.value.getUrl({
+        ...record,
+        parentPage: { page: selectionDialog.value.currentPage, filter: selectionDialog.value.filter },
+    }).url;
+    selectionDialog.value?.resetPagination(1);
+    load();
 }
 
 /** Called when user decides to upload new data */
@@ -153,15 +154,14 @@ function onUpload() {
 }
 
 /** Performs server request to retrieve data records **/
-function load(url: string = "") {
-    url = urlTracker.getUrl(url);
-    filter.value = "";
+function load() {
+    selectionDialog.value.resetFilter();
     optionsShow.value = false;
-    undoShow.value = !urlTracker.atRoot();
+    undoShow.value = !urlTracker.value.atRoot();
     services
-        .get(url)
+        .get(currentDirectory.value)
         .then((incoming) => {
-            if (props.library && urlTracker.atRoot()) {
+            if (props.library && urlTracker.value.atRoot()) {
                 incoming.unshift({
                     label: "Data Libraries",
                     url: `${getAppRoot()}api/libraries`,
@@ -176,8 +176,22 @@ function load(url: string = "") {
         });
 }
 
+function onGoBack(record?: SelectionItem) {
+    const res = urlTracker.value.getUrl(record, true);
+
+    currentDirectory.value = res.url;
+
+    load();
+
+    if (res?.popped) {
+        selectionDialog.value?.resetFilter(res?.popped.parentPage.filter);
+        selectionDialog.value?.resetPagination(res?.popped.parentPage.page);
+    }
+}
+
 onMounted(() => {
     if (props.history) {
+        currentDirectory.value = urlTracker.value.getUrl();
         load();
     }
 });
@@ -185,7 +199,8 @@ onMounted(() => {
 watch(
     () => history,
     () => {
-        urlTracker = new UrlTracker(getHistoryUrl());
+        urlTracker.value = new UrlTracker(getHistoryUrl());
+        currentDirectory.value = urlTracker.value.getUrl();
         load();
     }
 );
@@ -193,6 +208,7 @@ watch(
 
 <template>
     <SelectionDialog
+        ref="selectionDialog"
         :error-message="errorMessage"
         :disable-ok="!hasValue"
         :fields="fields"
@@ -206,7 +222,7 @@ watch(
         @onClick="onClick"
         @onOk="onOk"
         @onOpen="onOpen"
-        @onUndo="load()">
+        @onUndo="onGoBack">
         <template v-slot:buttons>
             <BButton v-if="allowUpload" size="sm" @click="onUpload">
                 <Icon :icon="faUpload" />
