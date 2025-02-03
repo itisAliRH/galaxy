@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { BAlert } from "bootstrap-vue";
-import Vue, { computed, onMounted, ref } from "vue";
+import Vue, { computed, onMounted, ref, watch } from "vue";
 
 import {
     browseRemoteFiles,
@@ -60,6 +60,8 @@ const { config, isConfigLoaded } = useConfig();
 
 const selectionModel = ref<Model>(new Model({ multiple: props.multiple }));
 
+const query = ref<string>();
+const selectionDialog = ref();
 const allSelected = ref(false);
 const selectedDirectories = ref<SelectionItem[]>([]);
 const errorMessage = ref<string>();
@@ -232,13 +234,17 @@ function checkIfAllSelected(): boolean {
 }
 
 function open(record: SelectionItem) {
-    load(record);
+    currentDirectory.value = urlTracker.value.getUrl({
+        ...record,
+        parentPage: { page: selectionDialog.value.currentPage },
+    });
+    selectionDialog.value?.resetPagination(1);
+    load();
 }
 
 /** Performs server request to retrieve data records **/
-function load(record?: SelectionItem) {
-    currentDirectory.value = urlTracker.value.getUrl(record);
-    showFTPHelper.value = record?.url === "gxftp://";
+function load() {
+    showFTPHelper.value = currentDirectory.value?.url === "gxftp://";
     filter.value = undefined;
     optionsShow.value = false;
     undoShow.value = !urlTracker.value.atRoot();
@@ -336,8 +342,8 @@ async function provideItems(ctx: ItemsProviderContext, url?: string): Promise<Se
         }
         const limit = ctx.perPage;
         const offset = (ctx.currentPage ? ctx.currentPage - 1 : 0) * ctx.perPage;
-        const query = ctx.filter;
-        const response = await browseRemoteFiles(url, false, props.requireWritable, limit, offset, query);
+        query.value = ctx.filter;
+        const response = await browseRemoteFiles(url, false, props.requireWritable, limit, offset, query.value);
         const result = response.entries.map(entryToRecord);
         totalItems.value = response.totalMatches;
         items.value = result;
@@ -413,13 +419,32 @@ function onOk() {
     finalize();
 }
 
+function onGoBack() {
+    const { url, popped } = urlTracker.value.getUrl(undefined, true);
+
+    currentDirectory.value = url;
+
+    load();
+
+    if (popped) {
+        selectionDialog.value?.resetPagination(popped.parentPage.page);
+    }
+}
+
+watch(query, () => {
+    selectionDialog.value?.resetPagination(1);
+});
+
 onMounted(() => {
-    load(props.selectedItem);
+    currentDirectory.value = urlTracker.value.getUrl(props.selectedItem);
+
+    load();
 });
 </script>
 
 <template>
     <SelectionDialog
+        ref="selectionDialog"
         :disable-ok="okButtonDisabled"
         :error-message="errorMessage"
         :file-mode="fileMode"
@@ -427,7 +452,6 @@ onMounted(() => {
         :is-busy="isBusy"
         :items="items"
         :items-provider="itemsProvider"
-        :provider-url="currentDirectory?.url"
         :total-items="totalItems"
         :modal-show="modalShow"
         :modal-static="modalStatic"
@@ -441,7 +465,7 @@ onMounted(() => {
         @onOk="onOk"
         @onOpen="open"
         @onSelectAll="onSelectAll"
-        @onUndo="load()">
+        @onUndo="onGoBack">
         <template v-slot:helper>
             <BAlert v-if="showFTPHelper && isConfigLoaded" id="helper" variant="info" show>
                 This Galaxy server allows you to upload files via FTP. To upload some files, log in to the FTP server at
