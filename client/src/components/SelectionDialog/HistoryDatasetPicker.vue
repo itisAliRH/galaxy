@@ -3,6 +3,7 @@ import { faHdd } from "@fortawesome/free-solid-svg-icons";
 import { computed, ref, set } from "vue";
 
 import { GalaxyApi, type HDASummary, type HistorySortByLiteral, type HistorySummary } from "@/api";
+import { UrlTracker } from "@/components/DataDialog/utilities";
 import { HistoriesFilters } from "@/components/History/HistoriesFilters";
 import {
     type ItemsProvider,
@@ -240,8 +241,14 @@ async function datasetsProvider(ctx: ItemsProviderContext, selectedHistory: Hist
     }
 }
 
+const urlTracker = ref(new UrlTracker(""));
+
 function onHistoryClick(item: SelectionItem) {
     if (!item.isLeaf) {
+        urlTracker.value.getUrl({
+            ...item,
+            parent: { page: selectionDialog.value.currentPage, filter: selectionDialog.value.filter },
+        });
         selectionDialog.value?.resetFilter();
         selectionDialog.value?.resetPagination();
         datasetsVisible.value = true;
@@ -276,8 +283,10 @@ function selectAll() {
 }
 
 async function onUndo() {
-    selectionDialog.value?.resetFilter();
-    selectionDialog.value?.resetPagination();
+    const { popped } = urlTracker.value.getUrl(undefined, true);
+
+    selectionDialog.value.resetFilter(popped.parent.filter ?? "");
+    selectionDialog.value.resetPagination(popped.parent.page ?? 1);
     selected.value = [];
     datasetsVisible.value = false;
     itemsProvider.value = historiesProvider;
