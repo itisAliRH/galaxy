@@ -139,35 +139,20 @@ function formatTime(value: string) {
     }
 }
 
-function resetFilter() {
-    filter.value = "";
+function resetFilter(newFilter = "") {
+    filter.value = newFilter;
 }
 
-function resetPagination() {
-    currentPage.value = 1;
+function resetPagination(toInitialPage = 1) {
+    currentPage.value = toInitialPage;
 }
 
 defineExpose({
+    filter,
+    currentPage,
     resetFilter,
     resetPagination,
 });
-
-watch(
-    () => props.items,
-    () => {
-        filtered(props.items);
-    }
-);
-
-watch(
-    () => props.providerUrl,
-    () => {
-        // We need to reset the current page when drilling down sub-folders
-        if (props.itemsProvider !== undefined) {
-            resetPagination();
-        }
-    }
-);
 </script>
 
 <template>
