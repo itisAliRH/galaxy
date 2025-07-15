@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { faCheck, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCheck, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { BCard, BCardBody, BCardTitle } from "bootstrap-vue";
+import { faArrowRight } from "font-awesome-6";
 import { computed } from "vue";
 
 import { useMarkdown } from "@/composables/markdown";
 
 import type { WizardReturnType, WizardStep } from "./useWizard";
+
+import GButton from "@/components/BaseComponents/GButton.vue";
+import Heading from "@/components/Common/Heading.vue";
 
 interface Props {
     /**
@@ -141,20 +144,6 @@ function isStepDone(currentIndex: number): boolean {
     return currentIndex < props.use.index.value;
 }
 
-/**
- * This is a workaround to make the grid columns template dynamic based on the number of visible steps.
- */
-const stepsGridColumnsTemplate = computed(() => {
-    const numVisibleSteps = Array.from(Object.values(props.use.steps.value)).filter(
-        (step) => !(step as WizardStep).isSkippable()
-    ).length;
-    return (
-        Array(numVisibleSteps - 1)
-            .fill("auto")
-            .join(" ") + " max-content"
-    );
-});
-
 const steps = computed<[string, WizardStep][]>(() => {
     return Object.entries(props.use.steps.value);
 });
@@ -170,44 +159,51 @@ const bodyStyle = computed(() => {
 </script>
 
 <template>
-    <component :is="props.containerComponent" class="wizard-container">
+    <div class="h-100 d-flex flex-column">
         <slot name="header">
-            <BCardTitle v-if="title">
-                <h2>{{ title }}</h2>
-            </BCardTitle>
+            <Heading v-if="title" h2 separator>
+                {{ title }}
+            </Heading>
         </slot>
 
         <slot name="description">
             <div v-if="props.description" v-html="renderMarkdown(props.description)" />
         </slot>
 
-        <BCardBody v-if="props.use?.steps?.value" class="wizard">
-            <BCard>
-                <BCardBody class="wizard-steps">
-                    <div
-                        v-for="([id, step], i) in steps"
-                        :key="id"
-                        class="wizard-step"
-                        :class="step.isSkippable() ? 'skipped ' : ''">
-                        <button
-                            class="step-number"
-                            :class="{ active: props.use.isCurrent(id), done: isStepDone(i) }"
+        <div v-if="props.use?.steps?.value" class="h-100 d-flex flex-column">
+            <div class="d-flex mb-4">
+                <div
+                    v-for="([id, step], i) in steps"
+                    :key="id"
+                    class="w-100"
+                    :class="step.isSkippable() ? 'd-none' : ''">
+                    <div class="position-relative d-flex flex-column justify-content-center align-items-center">
+                        <GButton
+                            :color="isStepDone(i) ? 'green' : 'blue'"
+                            :outline="!props.use.isCurrent(id) && !isStepDone(i)"
+                            size="large"
+                            class="rounded-pill"
                             :disabled="(!allStepsBeforeAreValid(i) && props.use.isBefore(id)) || isBusy"
                             @click="props.use.goTo(id)">
-                            <FontAwesomeIcon v-if="isStepDone(i)" :icon="faCheck" />
+                            <FontAwesomeIcon v-if="isStepDone(i)" :icon="faCheck" color="white" />
                             <FontAwesomeIcon v-else-if="dynamicIsLast() && isBusy" :icon="faSpinner" spin />
                             <span v-else>{{ determineDisplayStepIndex(i) }}</span>
-                        </button>
-                        <div class="step-label" v-text="step.label" />
-                        <div class="step-line" :class="{ fill: props.use.isAfter(id) }"></div>
+                        </GButton>
+
+                        <div
+                            v-if="i < steps.length - 1"
+                            class="step-line position-absolute bg-secondary"
+                            :class="{ 'bg-success': props.use.isAfter(id) }" />
                     </div>
-                </BCardBody>
-            </BCard>
 
-            <div class="step-content">
-                <span class="h-md step-instructions" v-text="props.use.current.value.instructions" />
+                    <div class="text-center" v-text="step.label" />
+                </div>
+            </div>
 
-                <div class="step-body w-100" :style="bodyStyle">
+            <div class="d-flex flex-column align-items-center p-2 h-100">
+                <span class="h-md mt-0 mb-1" v-text="props.use.current.value.instructions" />
+
+                <div class="d-flex flex-column align-items-center w-100" :style="bodyStyle">
                     <slot>
                         <p>
                             Missing body for step <b>{{ props.use.current.value.label }}</b>
@@ -215,135 +211,33 @@ const bodyStyle = computed(() => {
                     </slot>
                 </div>
             </div>
-            <div class="wizard-actions">
-                <button v-if="!props.use.isFirst.value" class="go-back-btn" :disabled="isBusy" @click="goBack">
-                    Back
-                </button>
 
-                <button
-                    class="go-next-btn"
+            <div class="d-flex justify-content-between mt-2 p-2">
+                <GButton :disabled="props.use.isFirst.value || isBusy" outline size="large" @click="goBack">
+                    <FontAwesomeIcon :icon="faArrowLeft" />
+                    Back
+                </GButton>
+
+                <GButton
+                    color="blue"
+                    size="large"
                     :disabled="!props.use.current.value.isValid() || isBusy"
                     :class="dynamicIsLast() ? 'btn-primary' : ''"
                     @click="goNext">
                     {{ dynamicIsLast() ? submitButtonLabel : "Next" }}
-                </button>
+                    <FontAwesomeIcon
+                        :icon="dynamicIsLast() ? (isBusy ? faSpinner : faCheck) : faArrowRight"
+                        :spin="isBusy" />
+                </GButton>
             </div>
-        </BCardBody>
-    </component>
+        </div>
+    </div>
 </template>
 
-<style lang="scss">
-@import "theme/blue.scss";
-
-.wizard {
-    padding: 0;
-
-    .wizard-steps {
-        padding: 0;
-        margin: 0;
-        display: grid;
-        grid-auto-flow: column;
-        grid-template-columns: v-bind(stepsGridColumnsTemplate);
-    }
-
-    .wizard-step {
-        padding: 0;
-        margin: 0;
-        display: grid;
-        grid-template-columns: 50px max-content auto;
-        grid-template-rows: auto;
-        grid-template-areas: "number label line";
-        justify-items: center;
-
-        .step-number {
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            background-color: $brand-secondary;
-            justify-content: center;
-            align-items: center;
-            font-size: 1rem;
-            grid-area: number;
-
-            &.active {
-                background-color: $brand-primary;
-                color: white;
-            }
-
-            &.done {
-                background-color: $brand-success;
-                color: white;
-            }
-        }
-
-        .step-label {
-            align-self: center;
-            grid-area: label;
-            text-align: center;
-            text-wrap: nowrap;
-        }
-
-        .step-line {
-            margin-left: 5px;
-            align-self: center;
-            grid-area: line;
-            width: 0;
-            height: 4px;
-            background-color: $brand-primary;
-
-            &.fill {
-                width: 100%;
-                transform-origin: left;
-                transition: width 0.2s;
-            }
-        }
-
-        &.skipped {
-            display: none;
-        }
-
-        &:last-child {
-            justify-self: end;
-        }
-    }
-
-    .step-content {
-        padding: 1rem 1rem 0rem 1rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-
-        .step-instructions {
-            margin-top: 0rem;
-            margin-bottom: 1rem;
-        }
-
-        .step-body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-    }
-
-    .wizard-actions {
-        padding: 1rem 1rem 0rem 1rem;
-
-        .go-back-btn {
-            float: left;
-        }
-
-        .go-next-btn {
-            float: right;
-        }
-    }
-
-    .wizard-selection-card {
-        border-width: 3px;
-        text-align: center;
-
-        .card-header {
-            border-radius: 0;
-        }
-    }
+<style scoped>
+.step-line {
+    height: 0.25rem;
+    inset-inline-start: calc(50% + 1.5rem);
+    inset-inline-end: calc(1.5rem - 50%);
 }
 </style>

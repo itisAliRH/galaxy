@@ -329,7 +329,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div>
+    <div class="h-100 d-flex flex-column">
         <ExistingInvocationExportProgressCard
             ref="existingProgress"
             :invocation-id="invocationId"
@@ -507,5 +507,14 @@ onUnmounted(() => {
     max-height: 100px;
     max-width: 100%;
     max-inline-size: -webkit-fill-available;
+}
+
+.wizard-selection-card {
+    border-width: 3px;
+    text-align: center;
+
+    .card-header {
+        border-radius: 0;
+    }
 }
 </style>

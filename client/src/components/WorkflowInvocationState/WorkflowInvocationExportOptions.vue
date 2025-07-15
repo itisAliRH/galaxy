@@ -16,9 +16,7 @@ defineProps({
 </script>
 
 <template>
-    <div v-if="config.enable_celery_tasks">
-        <InvocationExportWizard :invocation-id="invocationId" />
-    </div>
+    <InvocationExportWizard v-if="config.enable_celery_tasks" :invocation-id="invocationId" />
     <div v-else>
         <!--
             WARNING

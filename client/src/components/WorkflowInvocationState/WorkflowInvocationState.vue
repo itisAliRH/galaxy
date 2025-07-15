@@ -330,8 +330,9 @@ async function onCancel() {
         </WorkflowAnnotation>
         <BTabs
             ref="invocationTabs"
-            class="mt-1 d-flex flex-column overflow-auto"
-            :content-class="['overflow-auto', isScrollable ? 'pr-2' : '']">
+            class="mt-1 d-flex flex-column overflow-x-auto"
+            :active-tab-class="'h-100'"
+            :content-class="['overflow-x-auto h-100', isScrollable ? 'pr-2' : '']">
             <BTab key="0" title="Overview" active>
                 <WorkflowInvocationOverview
                     class="invocation-overview"
@@ -359,9 +360,7 @@ async function onCancel() {
                 <InvocationReport v-if="invocationStateSuccess" :invocation-id="invocation.id" />
             </BTab>
             <BTab title="Export" title-item-class="invocation-export-tab" :disabled="tabsDisabled" lazy>
-                <div v-if="invocationAndJobTerminal">
-                    <WorkflowInvocationExportOptions :invocation-id="invocation.id" />
-                </div>
+                <WorkflowInvocationExportOptions v-if="invocationAndJobTerminal" :invocation-id="invocation.id" />
             </BTab>
             <BTab title="Metrics" :lazy="true">
                 <WorkflowInvocationMetrics :invocation-id="invocation.id" :not-terminal="!invocationAndJobTerminal" />
