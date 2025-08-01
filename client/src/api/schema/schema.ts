@@ -11324,6 +11324,11 @@ export interface components {
             /** Copied From Ldda Id */
             copied_from_ldda_id?: string | null;
             /**
+             * Copied From Library Dataset Dataset Association Id
+             * @description ID of LDDA this HDA was copied from.
+             */
+            copied_from_library_dataset_dataset_association_id?: string | null;
+            /**
              * Create Time
              * @description The time and date this item was created.
              */
@@ -11572,6 +11577,11 @@ export interface components {
             copied_from_history_dataset_association_id?: string | null;
             /** Copied From Ldda Id */
             copied_from_ldda_id?: string | null;
+            /**
+             * Copied From Library Dataset Dataset Association Id
+             * @description ID of LDDA this HDA was copied from.
+             */
+            copied_from_library_dataset_dataset_association_id?: string | null;
             /**
              * Create Time
              * Format: date-time

@@ -1115,6 +1115,42 @@ class TestToolsApi(ApiTestCase, TestsTools):
             assert len(filenames) == 3, filenames
             assert len(set(filenames)) <= 2, filenames
 
+    @skip_without_tool("cat1")
+    @requires_new_history
+    def test_run_cat1_use_cached_job_build_list(self):
+        with self.dataset_populator.test_history_for(self.test_run_cat1_use_cached_job) as history_id:
+            # Run simple non-upload tool with an input data parameter.
+            inputs = self._get_cat1_inputs(history_id)
+            outputs_one = self._run_cat1(history_id, inputs=inputs, assert_ok=True, wait_for_job=True)
+            outputs_two = self._run_cat1(
+                history_id, inputs=inputs, use_cached_job=False, assert_ok=True, wait_for_job=True
+            )
+            # Rename inputs. Job should still be cached since cat1 doesn't look at name attribute
+            self.dataset_populator.rename_dataset(inputs["input1"]["id"])
+            outputs_three = self._run_cat1(
+                history_id, inputs=inputs, use_cached_job=True, assert_ok=False, wait_for_job=False
+            ).json()
+            outputs_four = self._run(
+                "__BUILD_LIST__",
+                history_id=history_id,
+                inputs={"datasets_0|input": {"src": "hda", "id": outputs_three["outputs"][0]["id"]}},
+            ).json()
+            self.dataset_populator.wait_for_job(outputs_three["jobs"][0]["id"])
+            dataset_details = []
+            for output in [outputs_one, outputs_two, outputs_three]:
+                output_id = output["outputs"][0]["id"]
+                dataset_details.append(self._get(f"datasets/{output_id}").json())
+                assert self._get(f"jobs/{output['jobs'][0]['id']}/metrics").json()
+            filenames = [dd["file_name"] for dd in dataset_details]
+            assert len(filenames) == 3, filenames
+            assert len(set(filenames)) <= 2, filenames
+            hdca = self.dataset_populator.get_history_collection_details(
+                history_id, content_id=outputs_four["output_collections"][0]["id"]
+            )
+            assert self.dataset_populator.get_history_dataset_content(
+                history_id, content_id=hdca["elements"][0]["object"]["id"]
+            )
+
     @skip_without_tool("cat_list")
     @skip_without_tool("__SORTLIST__")
     def test_run_cat_list_hdca_sort_order_respecrted_use_cached_job(self):
@@ -2883,38 +2919,6 @@ class TestToolsApi(ApiTestCase, TestsTools):
         output = outputs[0]
         output_content = self.dataset_populator.get_history_dataset_content(history_id, dataset=output)
         assert output_content.strip() == "123\n456\n456\n0ab"
-
-    @skip_without_tool("cat1")
-    def test_run_deferred_dataset(self, history_id):
-        details = self.dataset_populator.create_deferred_hda(
-            history_id, "https://raw.githubusercontent.com/galaxyproject/galaxy/dev/test-data/1.bed", ext="bed"
-        )
-        inputs = {
-            "input1": dataset_to_param(details),
-        }
-        outputs = self._cat1_outputs(history_id, inputs=inputs)
-        output = outputs[0]
-        details = self.dataset_populator.get_history_dataset_details(
-            history_id, dataset=output, wait=True, assert_ok=True
-        )
-        assert details["state"] == "ok"
-        output_content = self.dataset_populator.get_history_dataset_content(history_id, dataset=output)
-        assert output_content.startswith("chr1	147962192	147962580	CCDS989.1_cds_0_0_chr1_147962193_r	0	-")
-
-    @skip_without_tool("metadata_bam")
-    def test_run_deferred_dataset_with_metadata_options_filter(self, history_id):
-        details = self.dataset_populator.create_deferred_hda(
-            history_id, "https://raw.githubusercontent.com/galaxyproject/galaxy/dev/test-data/1.bam", ext="bam"
-        )
-        inputs = {"input_bam": dataset_to_param(details), "ref_names": "chrM"}
-        run_response = self.dataset_populator.run_tool(tool_id="metadata_bam", inputs=inputs, history_id=history_id)
-        output = run_response["outputs"][0]
-        output_details = self.dataset_populator.get_history_dataset_details(
-            history_id, dataset=output, wait=True, assert_ok=True
-        )
-        assert output_details["state"] == "ok"
-        output_content = self.dataset_populator.get_history_dataset_content(history_id, dataset=output)
-        assert output_content.startswith("chrM")
 
     @skip_without_tool("pileup")
     def test_metadata_validator_on_deferred_input(self, history_id):

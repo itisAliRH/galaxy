@@ -127,6 +127,7 @@ from sqlalchemy.orm import (
     reconstructor,
     registry,
     relationship,
+    remote,
     validates,
 )
 from sqlalchemy.orm.attributes import flag_modified
@@ -5473,6 +5474,7 @@ class HistoryDatasetAssociation(DatasetInstance, HasTags, Dictifiable, UsesAnnot
     dataset_id: Mapped[Optional[int]]
     hidden_beneath_collection_instance: Mapped[Optional["HistoryDatasetCollectionAssociation"]]
     tags: Mapped[List["HistoryDatasetAssociationTagAssociation"]]
+    copied_to_history_dataset_associations: Mapped[List["HistoryDatasetAssociation"]]
 
     def __init__(
         self,
@@ -5560,6 +5562,9 @@ class HistoryDatasetAssociation(DatasetInstance, HasTags, Dictifiable, UsesAnnot
             self.copy_tags_from(self.user, other_hda)
         self.dataset = new_dataset or other_hda.dataset
         self.copied_from_history_dataset_association_id = other_hda.id
+        for copied_hda in self.copied_to_history_dataset_associations:
+            copied_hda.copy_from(self, include_tags=include_tags, include_metadata=include_metadata)
+
         if old_dataset:
             old_dataset.full_delete()
 
@@ -8993,6 +8998,13 @@ class WorkflowInvocation(Base, UsesCreateAndUpdateTime, Dictifiable, Serializabl
     states = InvocationState
     non_terminal_states = [states.NEW, states.READY]
 
+    def get_last_workflow_invocation_step_update_time(self) -> Optional[datetime]:
+        session = required_object_session(self)
+        stmt = select(func.max(WorkflowInvocationStep.update_time)).where(
+            WorkflowInvocationStep.workflow_invocation_id == self.id
+        )
+        return session.execute(stmt).scalar_one_or_none()
+
     def create_subworkflow_invocation_for_step(self, step):
         assert step.type == "subworkflow"
         subworkflow_invocation = WorkflowInvocation()
@@ -11953,15 +11965,34 @@ mapper_registry.map_imperatively(
             lazy="joined",
             back_populates="history_associations",
         ),
-        copied_from_history_dataset_association=relationship(
-            HistoryDatasetAssociation,
-            primaryjoin=(
-                HistoryDatasetAssociation.table.c.copied_from_history_dataset_association_id
-                == HistoryDatasetAssociation.table.c.id
+        copied_to_history_dataset_associations=relationship(
+            "HistoryDatasetAssociation",
+            primaryjoin=lambda: and_(
+                HistoryDatasetAssociation.id
+                == remote(HistoryDatasetAssociation.copied_from_history_dataset_association_id),
+                # Include dataset_id, not technically necessary but allows filtering early
+                # and avoid the need for an index on copied_from_history_dataset_association_id
+                HistoryDatasetAssociation.dataset_id == remote(HistoryDatasetAssociation.dataset_id),
             ),
-            remote_side=[HistoryDatasetAssociation.table.c.id],
-            uselist=False,
+            remote_side=lambda: [
+                HistoryDatasetAssociation.copied_from_history_dataset_association_id,
+                HistoryDatasetAssociation.dataset_id,
+            ],
+            back_populates="copied_from_history_dataset_association",
+        ),
+        copied_from_history_dataset_association=relationship(
+            "HistoryDatasetAssociation",
+            primaryjoin=lambda: and_(
+                HistoryDatasetAssociation.copied_from_history_dataset_association_id
+                == remote(HistoryDatasetAssociation.id),
+                HistoryDatasetAssociation.dataset_id == remote(HistoryDatasetAssociation.dataset_id),
+            ),
+            remote_side=lambda: [
+                HistoryDatasetAssociation.id,
+                HistoryDatasetAssociation.dataset_id,
+            ],
             back_populates="copied_to_history_dataset_associations",
+            uselist=False,
         ),
         copied_from_library_dataset_dataset_association=relationship(
             LibraryDatasetDatasetAssociation,
@@ -11970,14 +12001,6 @@ mapper_registry.map_imperatively(
                 == HistoryDatasetAssociation.table.c.copied_from_library_dataset_dataset_association_id
             ),
             back_populates="copied_to_history_dataset_associations",
-        ),
-        copied_to_history_dataset_associations=relationship(
-            HistoryDatasetAssociation,
-            primaryjoin=(
-                HistoryDatasetAssociation.table.c.copied_from_history_dataset_association_id
-                == HistoryDatasetAssociation.table.c.id
-            ),
-            back_populates="copied_from_history_dataset_association",
         ),
         copied_to_library_dataset_dataset_associations=relationship(
             LibraryDatasetDatasetAssociation,
