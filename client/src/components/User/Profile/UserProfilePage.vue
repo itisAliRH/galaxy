@@ -9,6 +9,7 @@ import { GalaxyApi } from "@/api";
 import type { components } from "@/api/schema";
 import { useUserStore } from "@/stores/userStore";
 
+import ProfileHistoriesCard from "./ProfileHistoriesCard.vue";
 import ProfileIdentity from "./ProfileIdentity.vue";
 import Heading from "@/components/Common/Heading.vue";
 
@@ -34,6 +35,10 @@ const isOwner = computed(
     () =>
         currentUser.value !== null && "username" in currentUser.value && currentUser.value.username === props.username,
 );
+
+function sectionVisible(key: string) {
+    return profile.value?.visible_sections?.[key] ?? true;
+}
 
 async function load() {
     const requested = props.username;
@@ -95,12 +100,11 @@ watch(() => props.username, load);
                 </aside>
 
                 <main class="user-profile-content">
-                    <slot name="content" :profile="profile">
-                        <div class="gx-callout">
-                            This profile page will list published histories, workflows, pages, and visualizations as
-                            those sections land.
-                        </div>
-                    </slot>
+                    <ProfileHistoriesCard v-if="sectionVisible('histories')" :username="props.username" />
+
+                    <div class="gx-callout">
+                        Published workflows, pages, and visualizations will appear here as those sections land.
+                    </div>
                 </main>
             </template>
         </div>
