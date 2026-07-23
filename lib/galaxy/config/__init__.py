@@ -1234,6 +1234,7 @@ class GalaxyAppConfiguration(GalaxyAppConfigurationAttributes, BaseAppConfigurat
         if self.enable_beta_gdpr:
             self.expose_user_name = False
             self.expose_user_email = False
+            self.enable_user_profile_pages = False
 
             self.redact_username_during_deletion = True
             self.redact_email_during_deletion = True

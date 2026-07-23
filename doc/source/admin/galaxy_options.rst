@@ -2076,6 +2076,20 @@
 :Type: bool
 
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+``enable_user_profile_pages``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:Description:
+    Enable public, per-user profile pages under /profile/{username}.
+    Pages are opt-in for each user and only list content the user has
+    already published (histories, workflows, pages, visualizations)
+    plus profile details the user explicitly provides. This option is
+    forced off when enable_beta_gdpr is set.
+:Default: ``false``
+:Type: bool
+
+
 ~~~~~~~~~~~~~~~~~~~~
 ``session_duration``
 ~~~~~~~~~~~~~~~~~~~~

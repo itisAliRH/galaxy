@@ -1561,6 +1561,17 @@ mapping:
           Allow users to manage their account data, change passwords or delete their
           accounts.
 
+      enable_user_profile_pages:
+        type: bool
+        default: false
+        required: false
+        desc: |
+          Enable public, per-user profile pages under /profile/{username}. Pages are
+          opt-in for each user and only list content the user has already published
+          (histories, workflows, pages, visualizations) plus profile details the
+          user explicitly provides. This option is forced off when enable_beta_gdpr
+          is set.
+
       session_duration:
         type: int
         default: 0
