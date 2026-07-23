@@ -86,6 +86,7 @@ import CredentialsManagement from "@/components/User/Credentials/CredentialsMana
 import CustomBuilds from "@/components/User/CustomBuilds.vue";
 import HistoryStorageOverview from "@/components/User/DiskUsage/Visualizations/HistoryStorageOverview.vue";
 import NotificationsPreferences from "@/components/User/Notifications/NotificationsPreferences.vue";
+import ProfileSettings from "@/components/User/Profile/ProfileSettings.vue";
 import UserDatasetPermissions from "@/components/User/UserDatasetPermissions.vue";
 import UserOidcProfile from "@/components/User/UserOidcProfile.vue";
 import UserPreferences from "@/components/User/UserPreferences.vue";
@@ -743,6 +744,11 @@ export function getRouter(Galaxy) {
                         props: {
                             userId: Galaxy.user.id,
                         },
+                    },
+                    {
+                        path: "user/profile-settings",
+                        component: ProfileSettings,
+                        redirect: redirectAnon(),
                     },
                     {
                         path: "user/:formId",

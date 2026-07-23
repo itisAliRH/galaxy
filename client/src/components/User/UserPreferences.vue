@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import axios from "axios";
 import { BAlert } from "bootstrap-vue";
 import {
+    faAddressCard,
     faBell,
     faBroadcastTower,
     faCubes,
@@ -230,6 +231,14 @@ onMounted(async () => {
                     :title="localize('Manage Notifications')"
                     :description="localize('Manage your notification settings.')"
                     to="/user/notifications/preferences" />
+
+                <UserPreferencesElement
+                    v-if="isConfigLoaded && config.enable_user_profile_pages"
+                    id="edit-preferences-public-profile"
+                    :icon="faAddressCard"
+                    :title="localize('Manage Public Profile')"
+                    :description="localize('Enable your public profile page and choose what it shows.')"
+                    to="/user/profile-settings" />
 
                 <UserPreferencesElement
                     v-if="isConfigLoaded && config.enable_oidc && !config.fixed_delegated_auth"
