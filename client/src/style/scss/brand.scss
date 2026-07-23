@@ -1,0 +1,106 @@
+// Galaxy brand layer — the shared design system used by the Galaxy Hub and IWC.
+//
+// Token values (--color-galaxy-*, --color-bay-of-many-*, --color-gold-*, ...)
+// come from @galaxyproject/brand-tokens/tokens.css, imported globally in
+// onload/index.js. This file only defines the opt-in scope that consumes them:
+// wrapping a subtree in .gx-brand switches it to the brand design language
+// (16px reading scale, Hub palette roles, card/callout/tag patterns) without
+// affecting anything outside the scope.
+//
+// Reference: https://github.com/galaxyproject/galaxy-hub/blob/main/astro/DESIGN.md
+// and https://github.com/galaxyproject/galaxy-brand-tokens/blob/main/DESIGN.md
+// First adopter: personal user pages (/people/{username}).
+
+.gx-brand {
+    // The brand system is written against a 16px base; Galaxy app chrome uses
+    // 0.85rem. Escape the app scale inside the scope only.
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--color-galaxy-grey);
+    background: var(--color-light-bg);
+
+    a {
+        color: var(--color-galaxy-primary);
+
+        &:hover {
+            color: var(--color-galaxy-gold-dark);
+        }
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        color: var(--color-galaxy-dark);
+        font-weight: 700;
+    }
+
+    h2 {
+        border-bottom: 2px solid rgba(255, 215, 0, 0.25);
+        padding-bottom: 0.5rem;
+    }
+
+    // White reading surface on the light page background.
+    .gx-card {
+        background: #ffffff;
+        border: 1px solid rgba(37, 83, 123, 0.12);
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 2px rgba(44, 49, 67, 0.06);
+        padding: 1rem;
+    }
+
+    // List row with the signature gold left-edge accent.
+    .gx-row-accent {
+        position: relative;
+        overflow: hidden;
+
+        &::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: var(--color-galaxy-gold);
+        }
+    }
+
+    // Brand-tinted aside; deliberately blue so gold stays reserved for
+    // high-attention moments ("if everything is gold, nothing is gold").
+    .gx-callout {
+        background: var(--color-bay-of-many-100);
+        border-left: 4px solid var(--color-galaxy-primary);
+        border-radius: 0 0.5rem 0.5rem 0;
+        padding: 0.75rem 1rem;
+        color: var(--color-galaxy-dark);
+    }
+
+    // Outline content tag.
+    .gx-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.125rem 0.5625rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+        border: 1px solid rgba(37, 83, 123, 0.3);
+        color: var(--color-galaxy-dark);
+    }
+
+    // Primary gold CTA — dark text on gold, darkens on hover.
+    .gx-cta {
+        display: inline-block;
+        background: var(--color-galaxy-gold);
+        color: var(--color-galaxy-dark);
+        font-weight: 700;
+        padding: 0.375rem 0.875rem;
+        border-radius: 0.375rem;
+        border: none;
+
+        &:hover {
+            background: var(--color-galaxy-gold-dark);
+            color: var(--color-galaxy-dark);
+            text-decoration: none;
+        }
+    }
+}

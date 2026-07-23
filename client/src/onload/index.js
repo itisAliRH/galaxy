@@ -4,6 +4,8 @@ import "@/style/scss/base.scss";
 // Default Font
 import "@fontsource/atkinson-hyperlegible";
 import "@fontsource/atkinson-hyperlegible/700.css";
+// Galaxy brand design tokens (consumed by the .gx-brand scope in brand.scss)
+import "@galaxyproject/brand-tokens/tokens.css";
 
 import config from "config";
 
