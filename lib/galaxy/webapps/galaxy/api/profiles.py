@@ -1,10 +1,10 @@
 """
 API operations for public user profile pages.
 
-Serves the anonymous-readable side of user profiles under /api/people. The
+Serves the anonymous-readable side of user profiles under /api/profiles. The
 authenticated management endpoints live under /api/users/{user_id}/profile
 (see api/users.py); this namespace is keyed by username instead of an encoded
-user id, mirroring the client route /people/{username}.
+user id, mirroring the client route /profile/{username}.
 """
 
 import logging
@@ -23,7 +23,7 @@ from galaxy.webapps.galaxy.api import (
 
 log = logging.getLogger(__name__)
 
-router = Router(tags=["people"])
+router = Router(tags=["profiles"])
 
 UsernamePathParam: str = Path(
     default=...,
@@ -38,11 +38,11 @@ PROFILE_NOT_FOUND_MESSAGE = "No public profile is available for this username."
 
 
 @router.cbv
-class FastAPIPeople:
+class FastAPIProfiles:
     profile_manager: UserProfileManager = depends(UserProfileManager)
 
     @router.get(
-        "/api/people/{username}",
+        "/api/profiles/{username}",
         name="get_public_user_profile",
         summary="Return the public profile page for a username",
         public=True,

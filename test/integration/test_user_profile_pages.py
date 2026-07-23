@@ -79,7 +79,7 @@ class TestUserProfilePagesEnabledIntegration(integration_util.IntegrationTestCas
         response = self.galaxy_interactor.put(f"users/{user_id}/profile", data=payload, json=True)
         self._assert_status_code_is(response, 200)
 
-        response = self.galaxy_interactor.get(f"people/{username}", anon=True)
+        response = self.galaxy_interactor.get(f"profiles/{username}", anon=True)
         self._assert_status_code_is(response, 200)
         public = response.json()
         assert public["username"] == username
@@ -97,8 +97,8 @@ class TestUserProfilePagesEnabledIntegration(integration_util.IntegrationTestCas
         response = self.galaxy_interactor.put(f"users/{user_id}/profile", data={"published": False}, json=True)
         self._assert_status_code_is(response, 200)
 
-        unpublished = self.galaxy_interactor.get(f"people/{username}", anon=True)
-        unknown = self.galaxy_interactor.get("people/no-such-user-xyz", anon=True)
+        unpublished = self.galaxy_interactor.get(f"profiles/{username}", anon=True)
+        unknown = self.galaxy_interactor.get("profiles/no-such-user-xyz", anon=True)
         self._assert_status_code_is(unpublished, 404)
         self._assert_status_code_is(unknown, 404)
         # byte-identical bodies: no signal about whether the username exists
@@ -114,7 +114,7 @@ class TestUserProfilePagesDisabledIntegration(integration_util.IntegrationTestCa
         config["enable_user_profile_pages"] = False
 
     def test_public_profile_404_when_disabled(self):
-        response = self.galaxy_interactor.get("people/any-user", anon=True)
+        response = self.galaxy_interactor.get("profiles/any-user", anon=True)
         self._assert_status_code_is(response, 404)
 
 
@@ -135,7 +135,7 @@ class TestUserProfilePagesGdprIntegration(integration_util.IntegrationTestCase):
         assert response.json()["enable_user_profile_pages"] is False
 
     def test_public_profile_404_when_gdpr_enabled(self):
-        response = self.galaxy_interactor.get("people/any-user", anon=True)
+        response = self.galaxy_interactor.get("profiles/any-user", anon=True)
         self._assert_status_code_is(response, 404)
 
     def test_self_profile_403_when_gdpr_enabled(self):

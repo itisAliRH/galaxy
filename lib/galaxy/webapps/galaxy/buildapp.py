@@ -237,6 +237,7 @@ def app_pair(global_conf, load_app_kwds=None, wsgi_preflight=True, **kwargs):
     webapp.add_client_route("/user")
     webapp.add_client_route("/user/notifications{path:.*?}")
     webapp.add_client_route("/user/{form_id}")
+    webapp.add_client_route("/profile/{username}")
     webapp.add_client_route("/object_store_instances/create")
     webapp.add_client_route("/object_store_instances/index")
     webapp.add_client_route("/object_store_instances/{user_object_store_id}/edit")

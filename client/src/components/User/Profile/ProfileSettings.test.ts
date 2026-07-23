@@ -68,7 +68,7 @@ describe("ProfileSettings.vue", () => {
         expect(wrapper.text()).toContain("Enable my public page");
         const publishedInput = wrapper.find("#profile-published").element as HTMLInputElement;
         expect(publishedInput.checked).toBe(false);
-        expect(wrapper.text()).toContain(`/people/${TEST_USERNAME}`);
+        expect(wrapper.text()).toContain(`/profile/${TEST_USERNAME}`);
     });
 
     it("populates fields from an existing profile", async () => {

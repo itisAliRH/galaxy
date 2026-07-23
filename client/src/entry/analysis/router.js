@@ -87,6 +87,7 @@ import CustomBuilds from "@/components/User/CustomBuilds.vue";
 import HistoryStorageOverview from "@/components/User/DiskUsage/Visualizations/HistoryStorageOverview.vue";
 import NotificationsPreferences from "@/components/User/Notifications/NotificationsPreferences.vue";
 import ProfileSettings from "@/components/User/Profile/ProfileSettings.vue";
+import UserProfilePage from "@/components/User/Profile/UserProfilePage.vue";
 import UserDatasetPermissions from "@/components/User/UserDatasetPermissions.vue";
 import UserOidcProfile from "@/components/User/UserOidcProfile.vue";
 import UserPreferences from "@/components/User/UserPreferences.vue";
@@ -221,6 +222,12 @@ export function getRouter(Galaxy) {
                     initialX: route.query.initialX ? parseInt(route.query.initialX) : undefined,
                     initialY: route.query.initialY ? parseInt(route.query.initialY) : undefined,
                 }),
+            },
+            /** Public user profile pages */
+            {
+                path: "/profile/:username",
+                component: UserProfilePage,
+                props: (route) => ({ username: route.params.username }),
             },
             {
                 name: "error",

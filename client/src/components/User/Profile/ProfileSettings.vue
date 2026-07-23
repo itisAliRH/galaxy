@@ -48,7 +48,7 @@ const orcid = ref("");
 const avatarSeed = ref("");
 const visibleSections = ref<Record<string, boolean>>({});
 
-const profileUrl = computed(() => `/people/${username.value}`);
+const profileUrl = computed(() => `/profile/${username.value}`);
 
 function isSectionVisible(key: string) {
     return visibleSections.value[key] ?? true;
