@@ -428,6 +428,17 @@ def make_user(session):
 
 
 @pytest.fixture
+def make_user_profile(session, make_user):
+    def f(user=None, **kwd):
+        kwd["user"] = user or make_user()
+        model = m.UserProfile(**kwd)
+        write_to_db(session, model)
+        return model
+
+    return f
+
+
+@pytest.fixture
 def make_user_and_role(session, make_user, make_role, make_user_role_association):
     """
     Each user created in Galaxy is assumed to have a private role, such that role.type == Role.types.PRIVATE.

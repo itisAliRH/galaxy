@@ -902,6 +902,7 @@ class User(Base, Dictifiable, RepresentById):
     )
     object_stores: Mapped[list["UserObjectStore"]] = relationship(back_populates="user")
     file_sources: Mapped[list["UserFileSource"]] = relationship(back_populates="user")
+    profile: Mapped[Optional["UserProfile"]] = relationship(back_populates="user", uselist=False)
     quotas: Mapped[list["UserQuotaAssociation"]] = relationship(back_populates="user")
     quota_source_usages: Mapped[list["UserQuotaSourceUsage"]] = relationship(back_populates="user")
     social_auth: Mapped[list["UserAuthnzToken"]] = relationship(back_populates="user")
@@ -12533,6 +12534,33 @@ class UserPreference(Base, RepresentById):
         # AssociationProxy to which 2 args are passed.
         self.name = name
         self.value = value
+
+
+class UserProfile(Base, RepresentById):
+    """Public, opt-in profile page data for a user (one row per user).
+
+    Rows exist only after a user first saves their profile. Nothing here is
+    exposed publicly unless ``published`` is true and the instance enables
+    ``enable_user_profile_pages``.
+    """
+
+    __tablename__ = "user_profile"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("galaxy_user.id", ondelete="CASCADE"), index=True, unique=True)
+    published: Mapped[bool] = mapped_column(default=False, index=True)
+    display_name: Mapped[str | None] = mapped_column(Unicode(255))
+    description: Mapped[str | None] = mapped_column(Text)
+    affiliation: Mapped[str | None] = mapped_column(Unicode(255))
+    research_interests: Mapped[str | None] = mapped_column(Text)
+    orcid: Mapped[str | None] = mapped_column(Unicode(19))
+    avatar_seed: Mapped[str | None] = mapped_column(Unicode(255))
+    links: Mapped[list | None] = mapped_column(MutableJSONType)
+    visible_sections: Mapped[dict | None] = mapped_column(MutableJSONType)
+    create_time: Mapped[datetime] = mapped_column(default=now, nullable=True)
+    update_time: Mapped[datetime] = mapped_column(default=now, onupdate=now, nullable=True)
+
+    user: Mapped["User"] = relationship("User", back_populates="profile")
 
 
 class UsesTemplatesAppConfig(Protocol):
