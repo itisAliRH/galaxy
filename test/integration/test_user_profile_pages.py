@@ -62,3 +62,83 @@ class TestUserProfilePagesEnabledIntegration(integration_util.IntegrationTestCas
         user_id = self._current_user_id()
         response = self.galaxy_interactor.get(f"users/{user_id}/profile", anon=True)
         self._assert_status_code_is(response, 403)
+
+    def _current_username(self) -> str:
+        return self.galaxy_interactor.get("users/current").json()["username"]
+
+    def test_public_profile_anonymous_when_published(self):
+        user_id = self._current_user_id()
+        username = self._current_username()
+        payload = {
+            "published": True,
+            "display_name": "Public Alice",
+            "description": "Visible to everyone",
+            "avatar_seed": "public-seed-1",
+            "visible_sections": {"histories": True},
+        }
+        response = self.galaxy_interactor.put(f"users/{user_id}/profile", data=payload, json=True)
+        self._assert_status_code_is(response, 200)
+
+        response = self.galaxy_interactor.get(f"people/{username}", anon=True)
+        self._assert_status_code_is(response, 200)
+        public = response.json()
+        assert public["username"] == username
+        assert public["display_name"] == "Public Alice"
+        assert public["visible_sections"] == {"histories": True}
+        assert public["avatar_seed"] == "public-seed-1"
+        # the public payload must never carry account internals
+        assert "email" not in public
+        assert "id" not in public
+
+    def test_public_profile_404s_are_indistinguishable(self):
+        user_id = self._current_user_id()
+        username = self._current_username()
+        # ensure the current user's profile exists but is NOT published
+        response = self.galaxy_interactor.put(f"users/{user_id}/profile", data={"published": False}, json=True)
+        self._assert_status_code_is(response, 200)
+
+        unpublished = self.galaxy_interactor.get(f"people/{username}", anon=True)
+        unknown = self.galaxy_interactor.get("people/no-such-user-xyz", anon=True)
+        self._assert_status_code_is(unpublished, 404)
+        self._assert_status_code_is(unknown, 404)
+        # byte-identical bodies: no signal about whether the username exists
+        assert unpublished.content == unknown.content
+
+
+class TestUserProfilePagesDisabledIntegration(integration_util.IntegrationTestCase):
+    require_admin_user = False
+
+    @classmethod
+    def handle_galaxy_config_kwds(cls, config):
+        super().handle_galaxy_config_kwds(config)
+        config["enable_user_profile_pages"] = False
+
+    def test_public_profile_404_when_disabled(self):
+        response = self.galaxy_interactor.get("people/any-user", anon=True)
+        self._assert_status_code_is(response, 404)
+
+
+class TestUserProfilePagesGdprIntegration(integration_util.IntegrationTestCase):
+    require_admin_user = False
+
+    @classmethod
+    def handle_galaxy_config_kwds(cls, config):
+        super().handle_galaxy_config_kwds(config)
+        config["enable_user_profile_pages"] = True
+        config["enable_beta_gdpr"] = True
+
+    def test_config_reports_feature_disabled_under_gdpr(self):
+        # The GDPR block forces the flag off at config level, so the client
+        # never renders the profile UI in GDPR mode.
+        response = self.galaxy_interactor.get("configuration", anon=True)
+        self._assert_status_code_is(response, 200)
+        assert response.json()["enable_user_profile_pages"] is False
+
+    def test_public_profile_404_when_gdpr_enabled(self):
+        response = self.galaxy_interactor.get("people/any-user", anon=True)
+        self._assert_status_code_is(response, 404)
+
+    def test_self_profile_403_when_gdpr_enabled(self):
+        user_id = self.galaxy_interactor.get("users/current").json()["id"]
+        response = self.galaxy_interactor.get(f"users/{user_id}/profile")
+        self._assert_status_code_is(response, 403)

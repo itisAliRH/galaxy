@@ -4695,6 +4695,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/people/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the public profile page for a username */
+        get: operations["get_public_user_profile_api_people__username__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plugins": {
         parameters: {
             query?: never;
@@ -21185,6 +21202,62 @@ export interface components {
              * @default tar.gz
              */
             model_store_format: components["schemas"]["ModelStoreFormat"];
+        };
+        /**
+         * PublicUserProfile
+         * @description Public view of a user profile.
+         *
+         *     Deliberately a separate model from UserProfileDetail: it must never carry
+         *     the user's email, internal id, or unpublished state.
+         */
+        PublicUserProfile: {
+            /**
+             * Affiliation
+             * @description Institutional or organizational affiliation.
+             */
+            affiliation?: string | null;
+            /**
+             * Avatar seed
+             * @description Seed for the generated avatar; the username is used when unset.
+             */
+            avatar_seed?: string | null;
+            /**
+             * Description
+             * @description Short description shown under the name.
+             */
+            description?: string | null;
+            /**
+             * Display name
+             * @description Name shown on the profile page; falls back to the username when unset.
+             */
+            display_name?: string | null;
+            /**
+             * Links
+             * @description External links shown on the profile page.
+             */
+            links?: components["schemas"]["UserProfileLink"][] | null;
+            /**
+             * ORCID iD
+             * @description The user's ORCID iD, formatted 0000-0000-0000-0000.
+             */
+            orcid?: string | null;
+            /**
+             * Research interests
+             * @description Longer-form description of research interests.
+             */
+            research_interests?: string | null;
+            /**
+             * Username
+             * @description The owner's public name.
+             */
+            username: string;
+            /**
+             * Visible sections
+             * @description Which profile page sections are shown, keyed by section name.
+             */
+            visible_sections?: {
+                [key: string]: boolean;
+            } | null;
         };
         /** QuotaDetails */
         QuotaDetails: {
@@ -46734,6 +46807,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SharingStatus"];
+                };
+            };
+            /** @description Request Error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageExceptionModel"];
+                };
+            };
+            /** @description Server Error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageExceptionModel"];
+                };
+            };
+        };
+    };
+    get_public_user_profile_api_people__username__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The user ID that will be used to effectively make this API call. Only admins and designated users can make API calls on behalf of other users. */
+                "run-as"?: string | null;
+            };
+            path: {
+                /** @description The public username of the profile owner. */
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicUserProfile"];
                 };
             };
             /** @description Request Error */
