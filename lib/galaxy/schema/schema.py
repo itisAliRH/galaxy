@@ -1,6 +1,7 @@
 """This module contains general pydantic models and common schema field annotations for them."""
 
 import base64
+import re
 from datetime import (
     date,
     datetime,
@@ -23,10 +24,12 @@ from pydantic import (
     ConfigDict,
     Discriminator,
     Field,
+    field_validator,
     HttpUrl,
     Json,
     model_validator,
     RootModel,
+    StringConstraints,
     Tag,
     UUID4,
 )
@@ -491,6 +494,137 @@ class FavoriteObjectsSummary(Model):
         default_factory=list,
         title="Favorite order",
         description="The persisted order of top-level favorite tools and favorite sections.",
+    )
+
+
+USER_PROFILE_MAX_LINKS = 10
+USER_PROFILE_MAX_VISIBLE_SECTIONS = 20
+USER_PROFILE_MAX_SECTION_KEY_LENGTH = 64
+_ORCID_PATTERN = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")
+
+
+def _validate_orcid(value: str | None) -> str | None:
+    """Validate an ORCID iD: 0000-0000-0000-0000 format plus ISO 7064 11,2 checksum."""
+    if value is None or value == "":
+        return None
+    if not _ORCID_PATTERN.match(value):
+        raise ValueError("ORCID iD must have the format 0000-0000-0000-0000.")
+    digits = value.replace("-", "")
+    total = 0
+    for char in digits[:-1]:
+        total = (total + int(char)) * 2
+    checksum = (12 - total % 11) % 11
+    expected = "X" if checksum == 10 else str(checksum)
+    if digits[-1] != expected:
+        raise ValueError("Invalid ORCID iD: checksum mismatch.")
+    return value
+
+
+class UserProfileLink(Model):
+    label: str = Field(
+        default=...,
+        title="Label",
+        description="Display label for the link.",
+        max_length=64,
+    )
+    url: str = Field(
+        default=...,
+        title="URL",
+        description="The link target; must be an http(s) URL.",
+        max_length=2048,
+        pattern=r"^https?://",
+    )
+
+
+class UserProfileBase(Model):
+    display_name: str | None = Field(
+        default=None,
+        title="Display name",
+        description="Name shown on the profile page; falls back to the username when unset.",
+        max_length=255,
+    )
+    description: str | None = Field(
+        default=None,
+        title="Description",
+        description="Short description shown under the name.",
+        max_length=1000,
+    )
+    affiliation: str | None = Field(
+        default=None,
+        title="Affiliation",
+        description="Institutional or organizational affiliation.",
+        max_length=255,
+    )
+    research_interests: str | None = Field(
+        default=None,
+        title="Research interests",
+        description="Longer-form description of research interests.",
+        max_length=5000,
+    )
+    orcid: str | None = Field(
+        default=None,
+        title="ORCID iD",
+        description="The user's ORCID iD, formatted 0000-0000-0000-0000.",
+    )
+    avatar_seed: str | None = Field(
+        default=None,
+        title="Avatar seed",
+        description="Seed for the generated avatar; the username is used when unset.",
+        max_length=255,
+    )
+    links: list[UserProfileLink] | None = Field(
+        default=None,
+        title="Links",
+        description="External links shown on the profile page.",
+        max_length=USER_PROFILE_MAX_LINKS,
+    )
+    visible_sections: (
+        dict[Annotated[str, StringConstraints(max_length=USER_PROFILE_MAX_SECTION_KEY_LENGTH)], bool] | None
+    ) = Field(
+        default=None,
+        title="Visible sections",
+        description="Which profile page sections are shown, keyed by section name.",
+        max_length=USER_PROFILE_MAX_VISIBLE_SECTIONS,
+    )
+
+
+class UserProfileUpdatePayload(UserProfileBase):
+    published: bool = Field(
+        default=False,
+        title="Published",
+        description="Whether the profile page is publicly visible. Fields left unset are not modified.",
+    )
+
+    @field_validator("orcid")
+    @classmethod
+    def check_orcid(cls, value: str | None) -> str | None:
+        return _validate_orcid(value)
+
+
+class UserProfileDetail(UserProfileBase):
+    published: bool = Field(
+        default=False,
+        title="Published",
+        description="Whether the profile page is publicly visible.",
+    )
+    username: str | None = Field(
+        default=None,
+        title="Username",
+        description="The owner's public name; determines the profile page URL.",
+    )
+
+
+class PublicUserProfile(UserProfileBase):
+    """Public view of a user profile.
+
+    Deliberately a separate model from UserProfileDetail: it must never carry
+    the user's email, internal id, or unpublished state.
+    """
+
+    username: str = Field(
+        default=...,
+        title="Username",
+        description="The owner's public name.",
     )
 
 
