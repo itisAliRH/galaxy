@@ -25,6 +25,7 @@ interface ProfilePayload {
     affiliation: string | null;
     research_interests: string | null;
     orcid: string | null;
+    avatar_seed: string | null;
     links: { label: string; url: string }[] | null;
     visible_sections: Record<string, boolean> | null;
     username: string | null;

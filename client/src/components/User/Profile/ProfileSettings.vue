@@ -3,7 +3,7 @@ import { faDice, faSave } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { BAlert, BFormGroup, BFormInput, BFormTextarea } from "bootstrap-vue";
 import { storeToRefs } from "pinia";
-import { computed, onMounted, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 import { GalaxyApi } from "@/api";
 import { Toast } from "@/composables/toast";
@@ -122,7 +122,9 @@ async function saveProfile() {
     Toast.success("Public profile updated");
 }
 
-onMounted(loadProfile);
+// The user store loads asynchronously on a direct page load; fetch the
+// profile as soon as the current user id is available.
+watch(userId, loadProfile, { immediate: true });
 </script>
 
 <template>
