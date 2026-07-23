@@ -32,6 +32,7 @@ from galaxy.managers.context import (
     ProvidesUserContext,
 )
 from galaxy.managers.favorites import FavoritesManager
+from galaxy.managers.user_profile import UserProfileManager
 from galaxy.model import (
     Dataset,
     FormDefinition,
@@ -64,6 +65,8 @@ from galaxy.schema.schema import (
     UserBeaconSetting,
     UserCreationPayload,
     UserDeletionPayload,
+    UserProfileDetail,
+    UserProfileUpdatePayload,
     UserUpdatePayload,
 )
 from galaxy.security.validate_user_input import (
@@ -142,6 +145,11 @@ RecalculateDiskUsageResponseDescriptions = {
 }
 
 UserUpdateBody = Body(default=..., title="Update user", description="The user values to update.")
+UserProfileUpdateBody = Body(
+    default=...,
+    title="Update profile",
+    description="Profile fields to update. Fields left unset are not modified.",
+)
 FavoriteObjectBody = Body(
     default=..., title="Set favorite", description="The id of an object the user wants to favorite."
 )
@@ -158,6 +166,7 @@ class FastAPIUsers:
     service: UsersService = depends(UsersService)
     user_serializer: users.UserSerializer = depends(users.UserSerializer)
     favorites_manager: FavoritesManager = depends(FavoritesManager)
+    profile_manager: UserProfileManager = depends(UserProfileManager)
 
     @router.put(
         "/api/users/current/recalculate_disk_usage",
@@ -431,6 +440,41 @@ class FastAPIUsers:
         user = self.service.get_user(trans, user_id)
         favorites = self.favorites_manager.add(trans, user, object_type, payload.object_id)
         return FavoriteObjectsSummary.model_validate(favorites)
+
+    def _ensure_profile_pages_enabled(self, trans: ProvidesUserContext) -> None:
+        if not trans.app.config.enable_user_profile_pages or trans.app.config.enable_beta_gdpr:
+            raise exceptions.ConfigDoesNotAllowException("User profile pages are not enabled in this Galaxy instance")
+
+    @router.get(
+        "/api/users/{user_id}/profile",
+        name="get_user_profile",
+        summary="Return the user's own profile page settings",
+    )
+    def get_profile(
+        self,
+        user_id: UserIdPathParam,
+        trans: ProvidesUserContext = DependsOnTrans,
+    ) -> UserProfileDetail:
+        self._ensure_profile_pages_enabled(trans)
+        user = self.service.get_user(trans, user_id)
+        profile = self.profile_manager.get_for_user(user)
+        return self.profile_manager.to_detail(user, profile)
+
+    @router.put(
+        "/api/users/{user_id}/profile",
+        name="update_user_profile",
+        summary="Update the user's own profile page settings",
+    )
+    def update_profile(
+        self,
+        user_id: UserIdPathParam,
+        trans: ProvidesUserContext = DependsOnTrans,
+        payload: UserProfileUpdatePayload = UserProfileUpdateBody,
+    ) -> UserProfileDetail:
+        self._ensure_profile_pages_enabled(trans)
+        user = self.service.get_user(trans, user_id)
+        profile = self.profile_manager.upsert(user, payload)
+        return self.profile_manager.to_detail(user, profile)
 
     @router.put(
         "/api/users/{user_id}/theme/{theme}",

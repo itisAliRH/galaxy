@@ -6279,6 +6279,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/{user_id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Return the user's own profile page settings */
+        get: operations["get_user_profile_api_users__user_id__profile_get"];
+        /** Update the user's own profile page settings */
+        put: operations["update_user_profile_api_users__user_id__profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/{user_id}/recalculate_disk_usage": {
         parameters: {
             query?: never;
@@ -26180,6 +26198,126 @@ export interface components {
             object_store_id: string;
             /** Total Disk Usage */
             total_disk_usage: number;
+        };
+        /** UserProfileDetail */
+        UserProfileDetail: {
+            /**
+             * Affiliation
+             * @description Institutional or organizational affiliation.
+             */
+            affiliation?: string | null;
+            /**
+             * Avatar seed
+             * @description Seed for the generated avatar; the username is used when unset.
+             */
+            avatar_seed?: string | null;
+            /**
+             * Description
+             * @description Short description shown under the name.
+             */
+            description?: string | null;
+            /**
+             * Display name
+             * @description Name shown on the profile page; falls back to the username when unset.
+             */
+            display_name?: string | null;
+            /**
+             * Links
+             * @description External links shown on the profile page.
+             */
+            links?: components["schemas"]["UserProfileLink"][] | null;
+            /**
+             * ORCID iD
+             * @description The user's ORCID iD, formatted 0000-0000-0000-0000.
+             */
+            orcid?: string | null;
+            /**
+             * Published
+             * @description Whether the profile page is publicly visible.
+             * @default false
+             */
+            published: boolean;
+            /**
+             * Research interests
+             * @description Longer-form description of research interests.
+             */
+            research_interests?: string | null;
+            /**
+             * Username
+             * @description The owner's public name; determines the profile page URL.
+             */
+            username?: string | null;
+            /**
+             * Visible sections
+             * @description Which profile page sections are shown, keyed by section name.
+             */
+            visible_sections?: {
+                [key: string]: boolean;
+            } | null;
+        };
+        /** UserProfileLink */
+        UserProfileLink: {
+            /**
+             * Label
+             * @description Display label for the link.
+             */
+            label: string;
+            /**
+             * URL
+             * @description The link target; must be an http(s) URL.
+             */
+            url: string;
+        };
+        /** UserProfileUpdatePayload */
+        UserProfileUpdatePayload: {
+            /**
+             * Affiliation
+             * @description Institutional or organizational affiliation.
+             */
+            affiliation?: string | null;
+            /**
+             * Avatar seed
+             * @description Seed for the generated avatar; the username is used when unset.
+             */
+            avatar_seed?: string | null;
+            /**
+             * Description
+             * @description Short description shown under the name.
+             */
+            description?: string | null;
+            /**
+             * Display name
+             * @description Name shown on the profile page; falls back to the username when unset.
+             */
+            display_name?: string | null;
+            /**
+             * Links
+             * @description External links shown on the profile page.
+             */
+            links?: components["schemas"]["UserProfileLink"][] | null;
+            /**
+             * ORCID iD
+             * @description The user's ORCID iD, formatted 0000-0000-0000-0000.
+             */
+            orcid?: string | null;
+            /**
+             * Published
+             * @description Whether the profile page is publicly visible. Fields left unset are not modified.
+             * @default false
+             */
+            published: boolean;
+            /**
+             * Research interests
+             * @description Longer-form description of research interests.
+             */
+            research_interests?: string | null;
+            /**
+             * Visible sections
+             * @description Which profile page sections are shown, keyed by section name.
+             */
+            visible_sections?: {
+                [key: string]: boolean;
+            } | null;
         };
         /** UserQuota */
         UserQuota: {
@@ -51469,6 +51607,98 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserObjectstoreUsage"][];
+                };
+            };
+            /** @description Request Error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageExceptionModel"];
+                };
+            };
+            /** @description Server Error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageExceptionModel"];
+                };
+            };
+        };
+    };
+    get_user_profile_api_users__user_id__profile_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The user ID that will be used to effectively make this API call. Only admins and designated users can make API calls on behalf of other users. */
+                "run-as"?: string | null;
+            };
+            path: {
+                /** @description The ID of the user. */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfileDetail"];
+                };
+            };
+            /** @description Request Error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageExceptionModel"];
+                };
+            };
+            /** @description Server Error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageExceptionModel"];
+                };
+            };
+        };
+    };
+    update_user_profile_api_users__user_id__profile_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The user ID that will be used to effectively make this API call. Only admins and designated users can make API calls on behalf of other users. */
+                "run-as"?: string | null;
+            };
+            path: {
+                /** @description The ID of the user. */
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserProfileUpdatePayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfileDetail"];
                 };
             };
             /** @description Request Error */

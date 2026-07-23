@@ -488,3 +488,14 @@ class TestUsersApi(ApiTestCase):
         user_roles = response.json()
         assert len(user_roles) == 1
         assert user_roles[0]["type"] == PRIVATE_ROLE_TYPE
+
+    def test_profile_endpoints_disabled_by_default(self):
+        # enable_user_profile_pages is off in the default test configuration;
+        # the profile endpoints must refuse with 403 (ConfigDoesNotAllow).
+        # Functional coverage with the flag enabled lives in
+        # test/integration/test_user_profile_pages.py.
+        user_id = self._get_current_user_id()
+        response = self._get(f"users/{user_id}/profile")
+        self._assert_status_code_is(response, 403)
+        response = self._put(f"users/{user_id}/profile", data={"display_name": "X"}, json=True)
+        self._assert_status_code_is(response, 403)
