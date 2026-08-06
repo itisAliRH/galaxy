@@ -170,6 +170,25 @@ describe("UserProfilePage.vue", () => {
         expect(wrapper.text()).toContain("Back to editing");
     });
 
+    it("fills the main column with a placeholder when only side sections have content", async () => {
+        mockEmptySections();
+        server.use(
+            http.get("/api/profiles/{username}", ({ response }) =>
+                response(200).json(
+                    publicProfile({
+                        visible_sections: { histories: false, workflows: false, pages: false },
+                        starred_tools: [{ id: "cat1", name: "Concatenate datasets" }],
+                    }),
+                ),
+            ),
+        );
+        const wrapper = await mountPage(TEST_USERNAME, "someone-else");
+
+        expect(wrapper.find(".user-profile-layout-solo").exists()).toBe(false);
+        expect(wrapper.text()).toContain("Nothing shared here yet.");
+        expect(wrapper.text()).toContain("Starred tools");
+    });
+
     it("shows starred tools from the profile payload", async () => {
         mockEmptySections();
         server.use(

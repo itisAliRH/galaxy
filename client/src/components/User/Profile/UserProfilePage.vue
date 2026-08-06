@@ -125,6 +125,15 @@ const sideEmpty = computed(
     () => asVisitor.value && sideSections.value.every((key) => sectionHasContent.value[key] === false),
 );
 
+/**
+ * The main column renders nothing — every section there is hidden or empty —
+ * while the side column still has content, so it needs a placeholder rather
+ * than a blank half page.
+ */
+const mainEmpty = computed(
+    () => asVisitor.value && mainSections.value.every((key) => sectionHasContent.value[key] === false),
+);
+
 function definitionFor(key: string): ProfileSectionDefinition {
     // every key rendered by the columns comes from PROFILE_SECTIONS
     return PROFILE_SECTIONS.find((section) => section.key === key) as ProfileSectionDefinition;
@@ -278,12 +287,13 @@ watch([isOwner, userId], ([owner, id]) => {
 </script>
 
 <template>
-    <div class="gx-brand user-profile-page">
-        <div v-if="loading" class="user-profile-state">
+    <!-- bg-white: the reading surface — the page itself is the card -->
+    <div class="gx-brand user-profile-page h-100 overflow-auto p-4 bg-white">
+        <div v-if="loading" class="user-profile-state mx-auto">
             <Heading h1 size="lg"><FontAwesomeIcon :icon="faSpinner" spin /> Loading profile</Heading>
         </div>
 
-        <div v-else-if="notFound || !profile" class="user-profile-state">
+        <div v-else-if="notFound || !profile" class="user-profile-state mx-auto">
             <Heading h1 size="lg">No public profile</Heading>
 
             <GAlert variant="info">
@@ -292,11 +302,11 @@ watch([isOwner, userId], ([owner, id]) => {
             </GAlert>
         </div>
 
-        <div v-else class="user-profile-body">
+        <div v-else class="user-profile-body d-flex flex-column">
             <!-- page-wide banners: they span every column so the page state is
                  unmissable and the columns keep their own rhythm -->
             <GAlert v-if="publicPreview" variant="info">
-                <div class="user-profile-banner">
+                <div class="user-profile-banner d-flex flex-wrap align-items-center justify-content-between">
                     <span v-localize>This is how visitors see your page.</span>
 
                     <GButton id="profile-public-view-exit" color="blue" size="small" @click="publicPreview = false">
@@ -307,7 +317,7 @@ watch([isOwner, userId], ([owner, id]) => {
             </GAlert>
 
             <GAlert v-if="isUnpublished && !publicPreview" variant="warning">
-                <div class="user-profile-banner">
+                <div class="user-profile-banner d-flex flex-wrap align-items-center justify-content-between">
                     <span v-localize>Your page is not published — only you can see it.</span>
 
                     <GButton id="profile-publish-now" color="blue" size="small" @click="publishPage">
@@ -321,8 +331,10 @@ watch([isOwner, userId], ([owner, id]) => {
                 the handles to reorder sections and items.
             </div>
 
-            <div class="user-profile-layout" :class="{ 'user-profile-layout-solo': soloIdentity }">
-                <aside class="user-profile-rail">
+            <div
+                class="user-profile-layout d-flex flex-wrap align-items-start"
+                :class="{ 'user-profile-layout-solo': soloIdentity }">
+                <aside class="user-profile-rail d-flex flex-column">
                     <ProfileIdentity
                         :editable="editing"
                         :max-links="maxLinks"
@@ -330,7 +342,7 @@ watch([isOwner, userId], ([owner, id]) => {
                         :save="editing ? saveFields : undefined"
                         @toggle-about="onToggleSection('about', $event)" />
 
-                    <div v-if="editing" class="user-profile-owner-actions">
+                    <div v-if="editing" class="user-profile-owner-actions d-flex flex-column align-items-start">
                         <GButton
                             id="profile-public-view"
                             color="grey"
@@ -350,10 +362,17 @@ watch([isOwner, userId], ([owner, id]) => {
 
                 <!-- v-show, not v-if: the cards must mount to fetch and report content,
                  even while the empty-page solo state hides the columns -->
-                <main v-show="!soloIdentity" class="user-profile-content">
+                <main v-show="!soloIdentity" class="user-profile-content flex-column">
+                    <div
+                        v-if="mainEmpty"
+                        v-localize
+                        class="user-profile-empty d-flex align-items-center justify-content-center text-center font-italic">
+                        Nothing shared here yet.
+                    </div>
+
                     <draggable
                         v-model="mainSections"
-                        class="user-profile-sections"
+                        class="user-profile-sections d-flex flex-column"
                         :disabled="!editing"
                         :force-fallback="true"
                         ghost-class="user-profile-section-ghost"
@@ -376,7 +395,7 @@ watch([isOwner, userId], ([owner, id]) => {
                 <aside v-if="!sideEmpty" v-show="!soloIdentity" class="user-profile-side">
                     <draggable
                         v-model="sideSections"
-                        class="user-profile-sections"
+                        class="user-profile-sections d-flex flex-column"
                         :disabled="!editing"
                         :force-fallback="true"
                         ghost-class="user-profile-section-ghost"
@@ -412,40 +431,22 @@ watch([isOwner, userId], ([owner, id]) => {
 </template>
 
 <style scoped lang="scss">
-.user-profile-page {
-    height: 100%;
-    overflow: auto;
-    padding: 1.5rem;
-    // Reading surface: the page itself is the card.
-    background: #ffffff;
-}
-
 .user-profile-state {
     max-width: 720px;
-    margin: 0 auto;
 }
 
 .user-profile-body {
-    display: flex;
-    flex-direction: column;
     gap: 1rem;
 }
 
 .user-profile-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     gap: 1rem;
-    flex-wrap: wrap;
 }
 
 .user-profile-layout {
     // Columns wrap instead of squeezing: the page renders inside the center
     // panel, whose width varies with the activity bar and history panel, so
     // flex-basis + wrap adapts without viewport-based guesses.
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
     gap: 2rem;
 
     &.user-profile-layout-solo {
@@ -463,16 +464,15 @@ watch([isOwner, userId], ([owner, id]) => {
     .user-profile-rail {
         flex: 1 1 260px;
         min-width: 0;
-        display: flex;
-        flex-direction: column;
         gap: 1rem;
     }
 
     .user-profile-content {
+        // `display` stays custom: `d-flex` is `!important` and would beat the
+        // inline `display: none` that `v-show` sets on this element.
+        display: flex;
         flex: 4 1 380px;
         min-width: 0;
-        display: flex;
-        flex-direction: column;
         gap: 1.5rem;
     }
 
@@ -482,9 +482,12 @@ watch([isOwner, userId], ([owner, id]) => {
     }
 
     .user-profile-sections {
-        display: flex;
-        flex-direction: column;
         gap: 1.5rem;
+    }
+
+    .user-profile-empty {
+        min-height: 12rem;
+        opacity: 0.6;
     }
 
     .user-profile-section-ghost {
@@ -492,9 +495,6 @@ watch([isOwner, userId], ([owner, id]) => {
     }
 
     .user-profile-owner-actions {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
         gap: 0.5rem;
     }
 
