@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { faLevelDownAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { BFormInput } from "bootstrap-vue";
+import { BFormInput, BFormTextarea } from "bootstrap-vue";
 import { computed, ref, watch } from "vue";
+
+import { useUid } from "@/composables/utils/uid";
 
 interface Props {
     value: string;
     title?: string;
     component?: string;
+    multiline?: boolean;
     noSaveOnBlur?: boolean;
 }
 
@@ -17,6 +20,7 @@ const emit = defineEmits<{
     (e: "input", value: string): void;
 }>();
 
+const inputId = useUid("click-to-edit-");
 const clickToEditInput = ref<HTMLInputElement | null>(null);
 const editable = ref(false);
 const localValue = ref(props.value);
@@ -61,23 +65,40 @@ function revertToOriginal() {
 
 <template>
     <div v-if="editable" class="d-flex flex-gapx-1 input-icon-wrapper">
-        <BFormInput
-            id="click-to-edit-input"
+        <BFormTextarea
+            v-if="props.multiline"
+            :id="inputId"
             ref="clickToEditInput"
             v-model="localValue"
-            class="w-100 input-with-icon"
+            class="w-100"
             tabindex="0"
-            title="Press enter/return to save, esc to revert changes"
-            contenteditable
-            max-rows="4"
-            aria-label="Press enter/return to save, esc to revert changes"
+            title="Click outside to save, esc to revert changes"
+            rows="3"
+            max-rows="8"
+            aria-label="Click outside to save, esc to revert changes"
             @blur.prevent.stop="onBlur"
-            @keyup.prevent.stop.enter="editable = false"
-            @keyup.prevent.stop.escape="revertToOriginal"
+            @keyup.stop.escape="revertToOriginal"
             @click.prevent.stop />
-        <div class="input-icon">
-            <FontAwesomeIcon :icon="faLevelDownAlt" class="enter-icon" />
-        </div>
+
+        <template v-else>
+            <BFormInput
+                :id="inputId"
+                ref="clickToEditInput"
+                v-model="localValue"
+                class="w-100 input-with-icon"
+                tabindex="0"
+                title="Press enter/return to save, esc to revert changes"
+                contenteditable
+                max-rows="4"
+                aria-label="Press enter/return to save, esc to revert changes"
+                @blur.prevent.stop="onBlur"
+                @keyup.prevent.stop.enter="editable = false"
+                @keyup.prevent.stop.escape="revertToOriginal"
+                @click.prevent.stop />
+            <div class="input-icon">
+                <FontAwesomeIcon :icon="faLevelDownAlt" class="enter-icon" />
+            </div>
+        </template>
     </div>
 
     <component
@@ -85,7 +106,7 @@ function revertToOriginal() {
         v-else
         v-g-tooltip.onoverflow
         role="button"
-        for="click-to-edit-input"
+        :for="inputId"
         class="click-to-edit-label text-break"
         tabindex="0"
         :title="computedValue || title"
