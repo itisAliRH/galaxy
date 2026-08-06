@@ -27,8 +27,20 @@ function publicProfile(overrides: Record<string, unknown> = {}) {
         orcid: "0000-0002-1825-0097",
         links: [{ label: "website", url: "https://example.org" }],
         visible_sections: {},
+        layout: null,
         ...overrides,
     };
+}
+
+/** Every section card fetches its list on mount; default to empty lists. */
+function mockEmptySections() {
+    const emptyInit = { headers: { total_matches: "0" } };
+    server.use(
+        http.get("/api/histories", ({ response }) => response(200).json([] as never, emptyInit)),
+        http.get("/api/workflows", ({ response }) => response(200).json([] as never, emptyInit)),
+        http.get("/api/pages", ({ response }) => response(200).json([] as never, emptyInit)),
+        http.get("/api/visualizations", ({ response }) => response(200).json([] as never, emptyInit)),
+    );
 }
 
 async function mountPage(username = TEST_USERNAME, currentUsername: string | null = null) {
@@ -50,6 +62,7 @@ async function mountPage(username = TEST_USERNAME, currentUsername: string | nul
 
 describe("UserProfilePage.vue", () => {
     it("renders identity from the public API", async () => {
+        mockEmptySections();
         server.use(http.get("/api/profiles/{username}", ({ response }) => response(200).json(publicProfile())));
         const wrapper = await mountPage();
 
@@ -63,6 +76,7 @@ describe("UserProfilePage.vue", () => {
     });
 
     it("falls back to the username when display_name is unset", async () => {
+        mockEmptySections();
         server.use(
             http.get("/api/profiles/{username}", ({ response }) =>
                 response(200).json(publicProfile({ display_name: null })),
@@ -74,6 +88,7 @@ describe("UserProfilePage.vue", () => {
     });
 
     it("shows the not-found state on 404", async () => {
+        mockEmptySections();
         server.use(
             http.get("/api/profiles/{username}", ({ response }) =>
                 response("4XX").json({ err_msg: "not found", err_code: 404001 }, { status: 404 }),
@@ -84,16 +99,75 @@ describe("UserProfilePage.vue", () => {
         expect(wrapper.text()).toContain("No public profile");
     });
 
-    it("shows the edit button only for the owner", async () => {
+    it("centers the identity for visitors when no section has content", async () => {
+        mockEmptySections();
         server.use(http.get("/api/profiles/{username}", ({ response }) => response(200).json(publicProfile())));
-        const asOwner = await mountPage(TEST_USERNAME, TEST_USERNAME);
-        expect(asOwner.text()).toContain("Edit profile");
+        const wrapper = await mountPage(TEST_USERNAME, "someone-else");
 
-        const asVisitor = await mountPage(TEST_USERNAME, "someone-else");
-        expect(asVisitor.text()).not.toContain("Edit profile");
+        expect(wrapper.find(".user-profile-layout-solo").exists()).toBe(true);
+        expect(wrapper.find(".user-profile-content").isVisible()).toBe(false);
     });
 
-    it("hides about fields when the about section is toggled off", async () => {
+    it("lists section content for visitors", async () => {
+        mockEmptySections();
+        server.use(
+            http.get("/api/profiles/{username}", ({ response }) => response(200).json(publicProfile())),
+            http.get("/api/histories", ({ response }) =>
+                response(200).json(
+                    [
+                        {
+                            id: "abc1",
+                            name: "RNA-seq reference run",
+                            update_time: "2026-07-01T12:00:00.000Z",
+                            username: TEST_USERNAME,
+                            owner: TEST_USERNAME,
+                            published: true,
+                        },
+                    ] as never,
+                    { headers: { total_matches: "1" } },
+                ),
+            ),
+        );
+        const wrapper = await mountPage(TEST_USERNAME, "someone-else");
+
+        expect(wrapper.find(".user-profile-layout-solo").exists()).toBe(false);
+        expect(wrapper.text()).toContain("Published histories");
+        expect(wrapper.text()).toContain("RNA-seq reference run");
+        // visitors get no editing chrome
+        expect(wrapper.find(".click-to-edit-label").exists()).toBe(false);
+        expect(wrapper.text()).not.toContain("Page settings");
+    });
+
+    it("turns on inline editing for the owner", async () => {
+        mockEmptySections();
+        server.use(
+            http.get("/api/users/{user_id}/profile", ({ response }) =>
+                response(200).json(publicProfile({ published: true }) as never),
+            ),
+        );
+        const wrapper = await mountPage(TEST_USERNAME, TEST_USERNAME);
+
+        expect(wrapper.find(".click-to-edit-label").exists()).toBe(true);
+        expect(wrapper.text()).toContain("Page settings");
+        expect(wrapper.text()).toContain("This is your page as visitors see it.");
+        expect(wrapper.text()).not.toContain("Your page is not published");
+    });
+
+    it("shows the unpublished banner with a publish action to the owner", async () => {
+        mockEmptySections();
+        server.use(
+            http.get("/api/users/{user_id}/profile", ({ response }) =>
+                response(200).json(publicProfile({ published: false }) as never),
+            ),
+        );
+        const wrapper = await mountPage(TEST_USERNAME, TEST_USERNAME);
+
+        expect(wrapper.text()).toContain("Your page is not published");
+        expect(wrapper.find("#profile-publish-now").exists()).toBe(true);
+    });
+
+    it("hides about fields from visitors when the about section is toggled off", async () => {
+        mockEmptySections();
         server.use(
             http.get("/api/profiles/{username}", ({ response }) =>
                 response(200).json(publicProfile({ visible_sections: { about: false } })),
