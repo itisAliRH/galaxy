@@ -54,6 +54,7 @@ class UserProfileManager:
             avatar_seed=profile.avatar_seed,
             links=profile.links,
             visible_sections=profile.visible_sections,
+            layout=profile.layout,
         )
 
     def upsert(self, user: User, payload: UserProfileUpdatePayload, commit: bool = True) -> UserProfile:
@@ -119,4 +120,5 @@ class UserProfileManager:
             avatar_seed=profile.avatar_seed,
             links=profile.links,
             visible_sections=profile.visible_sections,
+            layout=profile.layout,
         )

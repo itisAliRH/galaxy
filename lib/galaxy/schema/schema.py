@@ -500,7 +500,13 @@ class FavoriteObjectsSummary(Model):
 USER_PROFILE_MAX_LINKS = 10
 USER_PROFILE_MAX_VISIBLE_SECTIONS = 20
 USER_PROFILE_MAX_SECTION_KEY_LENGTH = 64
+USER_PROFILE_MIN_SECTION_ITEMS = 1
+USER_PROFILE_MAX_SECTION_ITEMS = 20
+USER_PROFILE_MAX_SECTION_ITEM_IDS = 100
 _ORCID_PATTERN = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")
+
+ProfileSectionKey = Annotated[str, StringConstraints(max_length=USER_PROFILE_MAX_SECTION_KEY_LENGTH)]
+ProfileItemId = Annotated[str, StringConstraints(max_length=64)]
 
 
 def _validate_orcid(value: str | None) -> str | None:
@@ -533,6 +539,43 @@ class UserProfileLink(Model):
         description="The link target; must be an http(s) URL.",
         max_length=2048,
         pattern=r"^https?://",
+    )
+
+
+class UserProfileSectionLayout(Model):
+    limit: int | None = Field(
+        default=None,
+        title="Item limit",
+        description="How many items the section shows; the client default applies when unset.",
+        ge=USER_PROFILE_MIN_SECTION_ITEMS,
+        le=USER_PROFILE_MAX_SECTION_ITEMS,
+    )
+    pinned: list[ProfileItemId] | None = Field(
+        default=None,
+        title="Pinned items",
+        description="Encoded ids of items pinned to the top of the section, in display order.",
+        max_length=USER_PROFILE_MAX_SECTION_ITEM_IDS,
+    )
+    item_order: list[ProfileItemId] | None = Field(
+        default=None,
+        title="Item order",
+        description="Manual ordering of encoded item ids; unlisted items follow, newest first.",
+        max_length=USER_PROFILE_MAX_SECTION_ITEM_IDS,
+    )
+
+
+class UserProfileLayout(Model):
+    section_order: list[ProfileSectionKey] | None = Field(
+        default=None,
+        title="Section order",
+        description="Profile page sections in display order; unlisted sections follow in the default order.",
+        max_length=USER_PROFILE_MAX_VISIBLE_SECTIONS,
+    )
+    sections: dict[ProfileSectionKey, UserProfileSectionLayout] | None = Field(
+        default=None,
+        title="Section layout",
+        description="Per-section display settings, keyed by section name.",
+        max_length=USER_PROFILE_MAX_VISIBLE_SECTIONS,
     )
 
 
@@ -578,13 +621,16 @@ class UserProfileBase(Model):
         description="External links shown on the profile page.",
         max_length=USER_PROFILE_MAX_LINKS,
     )
-    visible_sections: (
-        dict[Annotated[str, StringConstraints(max_length=USER_PROFILE_MAX_SECTION_KEY_LENGTH)], bool] | None
-    ) = Field(
+    visible_sections: dict[ProfileSectionKey, bool] | None = Field(
         default=None,
         title="Visible sections",
         description="Which profile page sections are shown, keyed by section name.",
         max_length=USER_PROFILE_MAX_VISIBLE_SECTIONS,
+    )
+    layout: UserProfileLayout | None = Field(
+        default=None,
+        title="Layout",
+        description="Section ordering and per-section display settings for the profile page.",
     )
 
 

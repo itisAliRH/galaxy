@@ -4,6 +4,8 @@ from pydantic import ValidationError
 from galaxy.managers.user_profile import UserProfileManager
 from galaxy.schema.schema import (
     _validate_orcid,
+    USER_PROFILE_MAX_SECTION_ITEM_IDS,
+    USER_PROFILE_MAX_SECTION_ITEMS,
     USER_PROFILE_MAX_VISIBLE_SECTIONS,
     UserProfileUpdatePayload,
 )
@@ -81,6 +83,29 @@ class TestUserProfileManager(BaseTestCase):
         assert self.profile_manager.get_public_by_username("no-such-user") is None
         assert self.profile_manager.get_public_by_username("") is None
 
+    def test_layout_roundtrip(self):
+        user = self._user(email="layout-user@example.com", username="layout-user")
+        layout = {
+            "section_order": ["histories", "workflows"],
+            "sections": {"histories": {"limit": 3, "pinned": ["abc123"], "item_order": ["abc123", "def456"]}},
+        }
+        self.profile_manager.upsert(
+            user, UserProfileUpdatePayload.model_validate({"published": True, "layout": layout})
+        )
+        profile = self.profile_manager.get_public_by_username("layout-user")
+        assert profile is not None
+        public = self.profile_manager.to_public(profile)
+        assert public.layout is not None
+        assert public.layout.section_order == ["histories", "workflows"]
+        assert public.layout.sections is not None
+        assert public.layout.sections["histories"].limit == 3
+        assert public.layout.sections["histories"].pinned == ["abc123"]
+        # detail view carries the same layout back to the owner
+        detail = self.profile_manager.to_detail(user, self.profile_manager.get_for_user(user))
+        assert detail.layout is not None
+        assert detail.layout.sections is not None
+        assert detail.layout.sections["histories"].item_order == ["abc123", "def456"]
+
 
 class TestUserProfilePayloadValidation:
     def test_explicit_null_published_rejected(self):
@@ -99,6 +124,25 @@ class TestUserProfilePayloadValidation:
             UserProfileUpdatePayload.model_validate({"visible_sections": {"k" * 65: True}})
         ok = UserProfileUpdatePayload.model_validate({"visible_sections": {"histories": False}})
         assert ok.visible_sections == {"histories": False}
+
+    def test_layout_bounds(self):
+        with pytest.raises(ValidationError):
+            UserProfileUpdatePayload.model_validate({"layout": {"sections": {"histories": {"limit": 0}}}})
+        with pytest.raises(ValidationError):
+            UserProfileUpdatePayload.model_validate(
+                {"layout": {"sections": {"histories": {"limit": USER_PROFILE_MAX_SECTION_ITEMS + 1}}}}
+            )
+        too_many_ids = [f"id-{i}" for i in range(USER_PROFILE_MAX_SECTION_ITEM_IDS + 1)]
+        with pytest.raises(ValidationError):
+            UserProfileUpdatePayload.model_validate({"layout": {"sections": {"histories": {"pinned": too_many_ids}}}})
+        with pytest.raises(ValidationError):
+            UserProfileUpdatePayload.model_validate({"layout": {"section_order": ["k" * 65]}})
+        ok = UserProfileUpdatePayload.model_validate(
+            {"layout": {"section_order": ["histories"], "sections": {"histories": {"limit": 5}}}}
+        )
+        assert ok.layout is not None
+        assert ok.layout.sections is not None
+        assert ok.layout.sections["histories"].limit == 5
 
 
 class TestOrcidValidation:

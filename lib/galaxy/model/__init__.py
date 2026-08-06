@@ -12557,6 +12557,7 @@ class UserProfile(Base, RepresentById):
     avatar_seed: Mapped[str | None] = mapped_column(Unicode(255))
     links: Mapped[list | None] = mapped_column(MutableJSONType)
     visible_sections: Mapped[dict | None] = mapped_column(MutableJSONType)
+    layout: Mapped[dict | None] = mapped_column(MutableJSONType)
     create_time: Mapped[datetime] = mapped_column(default=now, nullable=True)
     update_time: Mapped[datetime] = mapped_column(default=now, onupdate=now, nullable=True)
 

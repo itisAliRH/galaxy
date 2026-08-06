@@ -21232,6 +21232,11 @@ export interface components {
              */
             display_name?: string | null;
             /**
+             * Layout
+             * @description Section ordering and per-section display settings for the profile page.
+             */
+            layout?: components["schemas"]["UserProfileLayout"] | null;
+            /**
              * Links
              * @description External links shown on the profile page.
              */
@@ -26295,6 +26300,11 @@ export interface components {
              */
             display_name?: string | null;
             /**
+             * Layout
+             * @description Section ordering and per-section display settings for the profile page.
+             */
+            layout?: components["schemas"]["UserProfileLayout"] | null;
+            /**
              * Links
              * @description External links shown on the profile page.
              */
@@ -26328,6 +26338,21 @@ export interface components {
                 [key: string]: boolean;
             } | null;
         };
+        /** UserProfileLayout */
+        UserProfileLayout: {
+            /**
+             * Section order
+             * @description Profile page sections in display order; unlisted sections follow in the default order.
+             */
+            section_order?: string[] | null;
+            /**
+             * Section layout
+             * @description Per-section display settings, keyed by section name.
+             */
+            sections?: {
+                [key: string]: components["schemas"]["UserProfileSectionLayout"];
+            } | null;
+        };
         /** UserProfileLink */
         UserProfileLink: {
             /**
@@ -26340,6 +26365,24 @@ export interface components {
              * @description The link target; must be an http(s) URL.
              */
             url: string;
+        };
+        /** UserProfileSectionLayout */
+        UserProfileSectionLayout: {
+            /**
+             * Item order
+             * @description Manual ordering of encoded item ids; unlisted items follow, newest first.
+             */
+            item_order?: string[] | null;
+            /**
+             * Item limit
+             * @description How many items the section shows; the client default applies when unset.
+             */
+            limit?: number | null;
+            /**
+             * Pinned items
+             * @description Encoded ids of items pinned to the top of the section, in display order.
+             */
+            pinned?: string[] | null;
         };
         /** UserProfileUpdatePayload */
         UserProfileUpdatePayload: {
@@ -26363,6 +26406,11 @@ export interface components {
              * @description Name shown on the profile page; falls back to the username when unset.
              */
             display_name?: string | null;
+            /**
+             * Layout
+             * @description Section ordering and per-section display settings for the profile page.
+             */
+            layout?: components["schemas"]["UserProfileLayout"] | null;
             /**
              * Links
              * @description External links shown on the profile page.
