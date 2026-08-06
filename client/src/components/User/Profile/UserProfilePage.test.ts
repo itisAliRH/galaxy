@@ -36,6 +36,7 @@ function publicProfile(overrides: Record<string, unknown> = {}) {
 function mockEmptySections() {
     const emptyInit = { headers: { total_matches: "0" } };
     server.use(
+        http.get("/api/configuration", ({ response }) => response(200).json({} as never)),
         http.get("/api/histories", ({ response }) => response(200).json([] as never, emptyInit)),
         http.get("/api/workflows", ({ response }) => response(200).json([] as never, emptyInit)),
         http.get("/api/pages", ({ response }) => response(200).json([] as never, emptyInit)),
@@ -151,6 +152,65 @@ describe("UserProfilePage.vue", () => {
         expect(wrapper.text()).toContain("Page settings");
         expect(wrapper.text()).toContain("This is your page as visitors see it.");
         expect(wrapper.text()).not.toContain("Your page is not published");
+    });
+
+    it("hides editing affordances in the owner's public preview", async () => {
+        mockEmptySections();
+        server.use(
+            http.get("/api/users/{user_id}/profile", ({ response }) =>
+                response(200).json(publicProfile({ published: true }) as never),
+            ),
+        );
+        const wrapper = await mountPage(TEST_USERNAME, TEST_USERNAME);
+
+        await wrapper.find("#profile-public-view").trigger("click");
+
+        expect(wrapper.text()).toContain("This is how visitors see your page.");
+        expect(wrapper.find(".click-to-edit-label").exists()).toBe(false);
+        expect(wrapper.text()).toContain("Back to editing");
+    });
+
+    it("shows starred tools from the profile payload", async () => {
+        mockEmptySections();
+        server.use(
+            http.get("/api/profiles/{username}", ({ response }) =>
+                response(200).json(publicProfile({ starred_tools: [{ id: "cat1", name: "Concatenate datasets" }] })),
+            ),
+        );
+        const wrapper = await mountPage(TEST_USERNAME, "someone-else");
+
+        expect(wrapper.text()).toContain("Starred tools");
+        expect(wrapper.text()).toContain("Concatenate datasets");
+        expect(wrapper.find(".user-profile-layout-solo").exists()).toBe(false);
+    });
+
+    it("switches to the owner view after the user store hydrates", async () => {
+        mockEmptySections();
+        server.use(
+            http.get("/api/profiles/{username}", ({ response }) =>
+                response("4XX").json({ err_msg: "not found", err_code: 404001 }, { status: 404 }),
+            ),
+            http.get("/api/users/{user_id}/profile", ({ response }) =>
+                response(200).json(publicProfile({ published: false }) as never),
+            ),
+        );
+        const pinia = createPinia();
+        setActivePinia(pinia);
+        const wrapper = mount(UserProfilePage as object, {
+            localVue,
+            pinia,
+            router: new VueRouter(),
+            propsData: { username: TEST_USERNAME },
+        });
+        await flushPromises();
+        expect(wrapper.text()).toContain("No public profile");
+
+        const userStore = useUserStore();
+        userStore.currentUser = getFakeRegisteredUser({ username: TEST_USERNAME });
+        await flushPromises();
+
+        expect(wrapper.text()).toContain("Your page is not published");
+        expect(wrapper.find(".click-to-edit-label").exists()).toBe(true);
     });
 
     it("shows the unpublished banner with a publish action to the owner", async () => {

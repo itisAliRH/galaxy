@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { BAlert } from "bootstrap-vue";
 import { storeToRefs } from "pinia";
 import { computed, ref, watch } from "vue";
 
@@ -8,6 +7,7 @@ import { Toast } from "@/composables/toast";
 import { useUserStore } from "@/stores/userStore";
 import { errorMessageAsString } from "@/utils/simple-error";
 
+import GAlert from "@/components/BaseComponents/GAlert.vue";
 import GCheckbox from "@/components/BaseComponents/GCheckbox.vue";
 import BreadcrumbHeading from "@/components/Common/BreadcrumbHeading.vue";
 import LoadingSpan from "@/components/LoadingSpan.vue";
@@ -22,7 +22,9 @@ const username = computed(() =>
     currentUser.value && "username" in currentUser.value ? currentUser.value.username : "",
 );
 
-const loading = ref(false);
+// starts true so the body never renders with a username-less URL before the
+// user store hydrates
+const loading = ref(true);
 const errorMessage = ref<string | null>(null);
 
 const published = ref(false);
@@ -34,7 +36,6 @@ async function loadProfile() {
     if (!userId.value) {
         return;
     }
-    loading.value = true;
     try {
         const { data, error } = await GalaxyApi().GET("/api/users/{user_id}/profile", {
             params: { path: { user_id: userId.value } },
@@ -86,13 +87,13 @@ watch(userId, loadProfile, { immediate: true });
             published.
         </div>
 
-        <BAlert v-if="errorMessage" show dismissible fade variant="warning" @dismissed="errorMessage = null">
+        <GAlert v-if="errorMessage" dismissible fade variant="warning" @dismissed="errorMessage = null">
             {{ errorMessage }}
-        </BAlert>
+        </GAlert>
 
-        <BAlert v-if="loading" class="m-2" show variant="info">
+        <GAlert v-if="loading" class="m-2" variant="info">
             <LoadingSpan message="Loading profile settings" />
-        </BAlert>
+        </GAlert>
 
         <div v-else class="profile-settings-body">
             <div class="card-container">

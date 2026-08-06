@@ -25,6 +25,11 @@ interface Props {
      */
     editable?: boolean;
     /**
+     * Maximum number of external links (from instance configuration)
+     * @default 10
+     */
+    maxLinks?: number;
+    /**
      * Persists changed fields; resolves to an error message or null.
      * Required when editable.
      * @default undefined
@@ -34,6 +39,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
     editable: false,
+    maxLinks: 10,
     save: undefined,
 });
 
@@ -164,7 +170,9 @@ function resetAvatar() {
                     {{ props.profile.description }}
                 </p>
 
-                <hr class="profile-identity-rule" />
+                <hr
+                    v-if="props.editable || props.profile.affiliation || orcidLink || links.length > 0"
+                    class="profile-identity-rule" />
 
                 <div class="profile-identity-meta">
                     <div v-if="props.editable || props.profile.affiliation" class="profile-identity-row">
@@ -210,7 +218,11 @@ function resetAvatar() {
                         <FontAwesomeIcon class="profile-identity-external" :icon="faExternalLinkAlt" size="xs" />
                     </a>
 
-                    <ProfileLinksEditor :editable="props.editable" :links="links" @update:links="onLinksUpdate" />
+                    <ProfileLinksEditor
+                        :editable="props.editable"
+                        :links="links"
+                        :max-links="props.maxLinks"
+                        @update:links="onLinksUpdate" />
                 </div>
 
                 <ClickToEdit
@@ -245,8 +257,6 @@ function resetAvatar() {
             bottom: 0.5rem;
             display: flex;
             gap: 0.25rem;
-            opacity: 0;
-            transition: opacity 0.15s ease-in-out;
 
             button {
                 border: none;
@@ -256,11 +266,6 @@ function resetAvatar() {
                 padding: 0.4rem;
                 color: var(--color-galaxy-dark);
             }
-        }
-
-        &:hover .profile-identity-avatar-actions,
-        &:focus-within .profile-identity-avatar-actions {
-            opacity: 1;
         }
     }
 

@@ -19,6 +19,11 @@ export const MIN_SECTION_ITEMS = 1;
 export const MAX_SECTION_ITEMS = 20;
 export const DEFAULT_SECTION_ITEMS = 5;
 
+/** Key of the starred-tools section; its data comes from the profile payload, not a fetcher. */
+export const TOOLS_SECTION_KEY = "tools";
+
+export type ProfileColumn = "main" | "side";
+
 export interface ProfileListItem {
     id: string;
     name: string;
@@ -28,6 +33,8 @@ export interface ProfileListItem {
 export interface ProfileSectionDefinition {
     key: string;
     label: string;
+    /** Which page column the section renders in. */
+    column: ProfileColumn;
     /** Hint shown to the owner when the section has no published items yet. */
     emptyHint: string;
     /** Route to the published item. */
@@ -125,6 +132,7 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
     {
         key: "histories",
         label: "Published histories",
+        column: "main",
         emptyHint: "No published histories yet. Published histories show up here automatically.",
         itemUrl: (item) => `/published/history?id=${item.id}`,
         listUrl: (username) => `/histories/list_published?f-username=${username}`,
@@ -133,6 +141,7 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
     {
         key: "workflows",
         label: "Published workflows",
+        column: "main",
         emptyHint: "No published workflows yet. Published workflows show up here automatically.",
         itemUrl: (item) => `/published/workflow?id=${item.id}`,
         listUrl: (username) => `/workflows/list_published?owner=${username}`,
@@ -141,6 +150,7 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
     {
         key: "pages",
         label: "Published pages",
+        column: "main",
         emptyHint: "No published pages yet. Published pages show up here automatically.",
         itemUrl: (item) => `/published/page?id=${item.id}`,
         listUrl: (username) => `/pages/list_published?f-username=${username}`,
@@ -149,6 +159,7 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
     {
         key: "visualizations",
         label: "Published visualizations",
+        column: "side",
         emptyHint: "No published visualizations yet. Published visualizations show up here automatically.",
         itemUrl: (item) => `/published/visualization?id=${item.id}`,
         listUrl: (username) => `/visualizations/list_published?f-username=${username}`,
@@ -156,4 +167,9 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
     },
 ];
 
-export const DEFAULT_SECTION_ORDER = PROFILE_SECTIONS.map((section) => section.key);
+/** Section keys in default display order; the tools section has no fetcher but participates in ordering and visibility. */
+export const DEFAULT_SECTION_ORDER = [
+    ...PROFILE_SECTIONS.filter((section) => section.column === "main").map((section) => section.key),
+    TOOLS_SECTION_KEY,
+    ...PROFILE_SECTIONS.filter((section) => section.column === "side").map((section) => section.key),
+];

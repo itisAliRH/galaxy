@@ -33,6 +33,11 @@ interface Props {
      */
     layout?: SectionLayout;
     /**
+     * Upper bound for the configurable item limit
+     * @default 20
+     */
+    maxItems?: number;
+    /**
      * Whether the section is visible to visitors
      * @default true
      */
@@ -42,6 +47,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     editable: false,
     layout: undefined,
+    maxItems: 20,
     visible: true,
 });
 
@@ -54,10 +60,12 @@ const emit = defineEmits<{
 const loading = ref(true);
 const items = ref<ProfileListItem[]>([]);
 const total = ref(0);
+const search = ref("");
 
 const limit = computed(() => props.layout?.limit ?? DEFAULT_SECTION_ITEMS);
 const pinned = computed(() => props.layout?.pinned ?? []);
 const pinnedSet = computed(() => new Set(pinned.value));
+const searching = computed(() => search.value.trim().length > 0);
 
 /** All fetched items: pinned first (in pin order), then manual order, then newest first. */
 const orderedItems = computed(() => {
@@ -83,11 +91,21 @@ const orderedItems = computed(() => {
 /**
  * The rows on screen — a writable computed so vuedraggable can commit a drop.
  * Displayed rows are always a prefix of orderedItems, so a reorder within
- * them merges back by simple concatenation with the off-screen tail.
+ * them merges back by simple concatenation with the off-screen tail. While a
+ * search is active the list is a filtered view instead and dragging is off.
  */
 const displayedItems = computed({
-    get: () => orderedItems.value.slice(0, limit.value),
+    get: () => {
+        if (searching.value) {
+            const query = search.value.trim().toLowerCase();
+            return orderedItems.value.filter((item) => item.name.toLowerCase().includes(query));
+        }
+        return orderedItems.value.slice(0, limit.value);
+    },
     set: (reordered: ProfileListItem[]) => {
+        if (searching.value) {
+            return;
+        }
         const offScreen = orderedItems.value.slice(limit.value);
         const fullOrder = [...reordered, ...offScreen];
         const newPinned = [
@@ -104,6 +122,8 @@ const showCard = computed(() => {
     }
     return props.visible && !loading.value && items.value.length > 0;
 });
+
+const dragDisabled = computed(() => !props.editable || !props.visible || searching.value);
 
 function emitLayout(changes: SectionLayout) {
     emit("update:layout", {
@@ -125,6 +145,19 @@ function togglePin(item: ProfileListItem) {
 
 function onLimitChange(value: number) {
     emitLayout({ limit: value });
+}
+
+/** Pinned items only reorder within the pinned block; unpinned items stay below it. */
+function onMove(event: {
+    draggedContext: { element: ProfileListItem };
+    relatedContext: { element?: ProfileListItem };
+}) {
+    const dragged = event.draggedContext.element;
+    const related = event.relatedContext.element;
+    if (!related) {
+        return true;
+    }
+    return isPinned(dragged) === isPinned(related);
 }
 
 async function load() {
@@ -152,24 +185,33 @@ onMounted(load);
         :count="total"
         :editable="props.editable"
         :limit="limit"
+        :max-items="props.maxItems"
+        :search="search"
+        :searchable="props.editable && items.length > 0"
         show-limit
         :title="props.definition.label"
         :visible="props.visible"
         @toggle-visible="emit('toggle-visible', $event)"
-        @update:limit="onLimitChange">
+        @update:limit="onLimitChange"
+        @update:search="search = $event">
         <div v-if="!loading && items.length > 0" class="gx-card profile-list">
             <draggable
                 v-model="displayedItems"
-                :disabled="!props.editable"
+                :disabled="dragDisabled"
                 :force-fallback="true"
                 ghost-class="profile-list-ghost"
-                handle=".profile-list-grip">
+                handle=".profile-list-grip"
+                :move="onMove">
                 <div
                     v-for="item in displayedItems"
                     :key="item.id"
                     class="gx-row-accent profile-list-item"
                     :class="{ 'profile-list-item-pinned': isPinned(item) }">
-                    <span v-if="props.editable" class="profile-list-grip" title="Drag to reorder">
+                    <span
+                        v-if="props.editable"
+                        class="profile-list-grip"
+                        :class="{ 'profile-list-grip-disabled': dragDisabled }"
+                        title="Drag to reorder">
                         <FontAwesomeIcon :icon="faGripLines" fixed-width />
                     </span>
 
@@ -192,6 +234,7 @@ onMounted(load);
                         class="profile-list-pin"
                         :class="{ 'profile-list-pin-active': isPinned(item) }"
                         type="button"
+                        :disabled="!props.visible"
                         :title="isPinned(item) ? 'Unpin from the top' : 'Pin to the top'"
                         :aria-label="isPinned(item) ? 'Unpin from the top' : 'Pin to the top'"
                         @click="togglePin(item)">
@@ -200,7 +243,14 @@ onMounted(load);
                 </div>
             </draggable>
 
-            <router-link v-if="total > limit" class="profile-list-more" :to="props.definition.listUrl(props.username)">
+            <div v-if="searching && displayedItems.length === 0" v-localize class="profile-list-empty">
+                No items match the search.
+            </div>
+
+            <router-link
+                v-if="!searching && total > limit"
+                class="profile-list-more"
+                :to="props.definition.listUrl(props.username)">
                 View all {{ total }} →
             </router-link>
         </div>
@@ -246,6 +296,11 @@ onMounted(load);
         &:hover {
             opacity: 0.9;
         }
+
+        &.profile-list-grip-disabled {
+            pointer-events: none;
+            opacity: 0.15;
+        }
     }
 
     .profile-list-link {
@@ -286,12 +341,22 @@ onMounted(load);
         &.profile-list-pin-active {
             opacity: 0.9;
         }
+
+        &:focus-visible {
+            opacity: 1;
+        }
+
+        &:disabled {
+            pointer-events: none;
+        }
     }
 
-    .profile-list-item:hover .profile-list-pin {
+    .profile-list-item:hover .profile-list-pin,
+    .profile-list-item:focus-within .profile-list-pin {
         opacity: 0.5;
 
         &:hover,
+        &:focus-visible,
         &.profile-list-pin-active {
             opacity: 1;
         }

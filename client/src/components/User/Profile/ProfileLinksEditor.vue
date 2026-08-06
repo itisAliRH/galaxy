@@ -1,8 +1,18 @@
 <script setup lang="ts">
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import {
+    faGithub,
+    faGitlab,
+    faLinkedin,
+    faMastodon,
+    faOrcid,
+    faTwitter,
+    faYoutube,
+} from "@fortawesome/free-brands-svg-icons";
 import {
     faCheck,
     faExternalLinkAlt,
-    faLink,
+    faGlobe,
     faPencilAlt,
     faPlus,
     faTimes,
@@ -18,8 +28,16 @@ import GButton from "@/components/BaseComponents/GButton.vue";
 
 type UserProfileLink = components["schemas"]["UserProfileLink"];
 
-/** Mirror of the backend limit on profile links. */
-const MAX_LINKS = 10;
+/** Known services get their brand icon; everything else falls back to a globe. */
+const BRAND_ICONS: [RegExp, IconDefinition][] = [
+    [/(^|\.)github\.com$/, faGithub],
+    [/(^|\.)gitlab\.com$/, faGitlab],
+    [/(^|\.)linkedin\.com$/, faLinkedin],
+    [/(^|\.)orcid\.org$/, faOrcid],
+    [/(^|\.)(twitter|x)\.com$/, faTwitter],
+    [/(^|\.)(youtube\.com|youtu\.be)$/, faYoutube],
+    [/(^|\.)mastodon\./, faMastodon],
+];
 
 interface Props {
     /**
@@ -32,11 +50,17 @@ interface Props {
      * @default () => []
      */
     links?: UserProfileLink[];
+    /**
+     * Maximum number of links a profile can hold (from instance configuration)
+     * @default 10
+     */
+    maxLinks?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     editable: false,
     links: () => [],
+    maxLinks: 10,
 });
 
 const emit = defineEmits<{
@@ -49,7 +73,30 @@ const draftLabel = ref("");
 const draftUrl = ref("");
 const draftError = ref<string | null>(null);
 
-const canAdd = computed(() => props.links.length < MAX_LINKS);
+const canAdd = computed(() => props.links.length < props.maxLinks);
+
+function hostname(url: string) {
+    try {
+        return new URL(url).hostname.replace(/^www\./, "");
+    } catch {
+        return url;
+    }
+}
+
+function linkIcon(link: UserProfileLink): IconDefinition {
+    const host = hostname(link.url);
+    for (const [pattern, icon] of BRAND_ICONS) {
+        if (pattern.test(host)) {
+            return icon;
+        }
+    }
+    return faGlobe;
+}
+
+/** The label is optional; the link's hostname stands in when it is empty. */
+function linkLabel(link: UserProfileLink) {
+    return link.label || hostname(link.url);
+}
 
 function startEdit(index: number) {
     editingIndex.value = index;
@@ -73,16 +120,12 @@ function cancelEdit() {
 function commitEdit() {
     const label = draftLabel.value.trim();
     const url = draftUrl.value.trim();
-    if (!label) {
-        draftError.value = "The link needs a label.";
-        return;
-    }
     if (!/^https?:\/\/.+/.test(url)) {
         draftError.value = "The URL must start with http:// or https://.";
         return;
     }
     const updated = [...props.links];
-    updated.splice(editingIndex.value ?? updated.length, 1, { label, url });
+    updated.splice(editingIndex.value ?? updated.length, 1, { label: label || hostname(url), url });
     emit("update:links", updated);
     cancelEdit();
 }
@@ -98,10 +141,10 @@ function removeLink(index: number) {
     <div v-if="props.links.length > 0 || props.editable" class="profile-links">
         <template v-for="(link, index) in props.links">
             <div v-if="editingIndex !== index" :key="`link-${index}`" class="profile-links-row">
-                <FontAwesomeIcon :icon="faLink" fixed-width />
+                <FontAwesomeIcon :icon="linkIcon(link)" fixed-width />
 
                 <a class="profile-links-anchor" :href="link.url" rel="noopener noreferrer" target="_blank">
-                    {{ link.label }}
+                    {{ linkLabel(link) }}
                     <FontAwesomeIcon class="profile-links-external" :icon="faExternalLinkAlt" size="xs" />
                 </a>
 
@@ -117,11 +160,11 @@ function removeLink(index: number) {
             </div>
 
             <div v-else :key="`link-edit-${index}`" class="profile-links-editor">
-                <BFormInput v-model="draftLabel" placeholder="Label, e.g. GitHub" size="sm" />
-
                 <BFormInput v-model="draftUrl" placeholder="https://…" size="sm" type="url" @keyup.enter="commitEdit" />
 
-                <span class="profile-links-actions">
+                <BFormInput v-model="draftLabel" placeholder="Label (optional)" size="sm" @keyup.enter="commitEdit" />
+
+                <span class="profile-links-editor-actions">
                     <button type="button" title="Save link" aria-label="Save link" @click="commitEdit">
                         <FontAwesomeIcon :icon="faCheck" fixed-width />
                     </button>
@@ -134,11 +177,11 @@ function removeLink(index: number) {
         </template>
 
         <div v-if="editingIndex === props.links.length" class="profile-links-editor">
-            <BFormInput v-model="draftLabel" placeholder="Label, e.g. GitHub" size="sm" />
-
             <BFormInput v-model="draftUrl" placeholder="https://…" size="sm" type="url" @keyup.enter="commitEdit" />
 
-            <span class="profile-links-actions">
+            <BFormInput v-model="draftLabel" placeholder="Label (optional)" size="sm" @keyup.enter="commitEdit" />
+
+            <span class="profile-links-editor-actions">
                 <button type="button" title="Save link" aria-label="Save link" @click="commitEdit">
                     <FontAwesomeIcon :icon="faCheck" fixed-width />
                 </button>
@@ -185,16 +228,22 @@ function removeLink(index: number) {
         }
     }
 
+    // The URL and label inputs stack so each gets a readable width.
     .profile-links-editor {
         display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.35rem;
     }
 
-    .profile-links-actions {
+    .profile-links-editor-actions {
         display: inline-flex;
+        justify-content: flex-end;
         gap: 0.25rem;
+    }
 
+    .profile-links-actions,
+    .profile-links-editor-actions {
         button {
             border: none;
             background: none;
@@ -202,17 +251,24 @@ function removeLink(index: number) {
             color: inherit;
             opacity: 0.55;
 
-            &:hover {
+            &:hover,
+            &:focus-visible {
                 opacity: 1;
             }
         }
+    }
+
+    .profile-links-actions {
+        display: inline-flex;
+        gap: 0.25rem;
     }
 
     .profile-links-row .profile-links-actions {
         opacity: 0;
     }
 
-    .profile-links-row:hover .profile-links-actions {
+    .profile-links-row:hover .profile-links-actions,
+    .profile-links-row:focus-within .profile-links-actions {
         opacity: 1;
     }
 
