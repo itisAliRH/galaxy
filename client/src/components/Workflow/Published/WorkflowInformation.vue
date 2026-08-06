@@ -6,6 +6,7 @@ import { RouterLink } from "vue-router";
 
 import type { StoredWorkflowDetailed } from "@/api/workflows";
 import { getFullAppUrl } from "@/app/utils";
+import { useConfig } from "@/composables/config";
 import { useUserStore } from "@/stores/userStore";
 
 import Heading from "@/components/Common/Heading.vue";
@@ -22,6 +23,8 @@ interface Props {
 const props = defineProps<Props>();
 
 const userStore = useUserStore();
+
+const { config, isConfigLoaded } = useConfig(true);
 
 const gravatarSource = computed(
     () => `https://secure.gravatar.com/avatar/${props.workflowInfo?.email_hash}?d=identicon`,
@@ -48,6 +51,14 @@ const owner = computed(() => {
     return props.workflowInfo.owner;
 });
 
+const authorProfileUrl = computed(() => {
+    if (!isConfigLoaded.value || !config.value.enable_user_profile_pages || props.workflowInfo?.creator_deleted) {
+        return null;
+    }
+    const username = props.workflowInfo?.owner;
+    return username ? `/profile/${username}` : null;
+});
+
 function hasDoi() {
     if (props.workflowInfo.doi && props.workflowInfo.doi.length > 0) {
         return true;
@@ -70,7 +81,10 @@ function hasDoi() {
         <div class="workflow-info-box">
             <hgroup class="mb-2">
                 <Heading v-localize h3 size="md" class="mb-0">Author</Heading>
-                <span class="ml-2">{{ owner }}</span>
+                <span class="ml-2">
+                    <RouterLink v-if="authorProfileUrl" :to="authorProfileUrl">{{ owner }}</RouterLink>
+                    <template v-else>{{ owner }}</template>
+                </span>
             </hgroup>
 
             <img alt="User Avatar" :src="gravatarSource" class="mb-2" />

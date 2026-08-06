@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import { useConfig } from "@/composables/config";
+
 import type { PublishedItem } from "./models/PublishedItem";
 
 import ActivityBar from "@/components/ActivityBar/ActivityBar.vue";
@@ -14,6 +16,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const { config, isConfigLoaded } = useConfig(true);
 
 const modelTitle = computed(() => {
     const modelClass = props.item?.model_class ?? "Item";
@@ -35,6 +39,14 @@ const owner = computed(() => {
         return "Archived author";
     }
     return props.item?.owner ?? props.item?.username ?? "Unavailable";
+});
+
+const authorProfileUrl = computed(() => {
+    if (!isConfigLoaded.value || !config.value.enable_user_profile_pages || props.item?.author_deleted) {
+        return null;
+    }
+    const username = props.item?.username ?? props.item?.owner;
+    return username ? `/profile/${username}` : null;
 });
 
 const gravatarSource = computed(() => `https://secure.gravatar.com/avatar/${props.item?.email_hash}?d=identicon`);
@@ -65,7 +77,10 @@ const urlAll = computed(() => `/${pluralPath.value}/list_published`);
 
                 <h2 class="h-sm">Author</h2>
 
-                <div>{{ owner }}</div>
+                <div>
+                    <router-link v-if="authorProfileUrl" :to="authorProfileUrl">{{ owner }}</router-link>
+                    <template v-else>{{ owner }}</template>
+                </div>
 
                 <hr />
 
