@@ -139,7 +139,7 @@ describe("UserProfilePage.vue", () => {
         expect(wrapper.text()).not.toContain("Page settings");
     });
 
-    it("turns on inline editing for the owner", async () => {
+    it("opens the identity editor only once the owner asks for it", async () => {
         mockEmptySections();
         server.use(
             http.get("/api/users/{user_id}/profile", ({ response }) =>
@@ -148,10 +148,58 @@ describe("UserProfilePage.vue", () => {
         );
         const wrapper = await mountPage(TEST_USERNAME, TEST_USERNAME);
 
-        expect(wrapper.find(".click-to-edit-label").exists()).toBe(true);
+        // the identity card reads as visitors see it until "Edit profile" is clicked
+        expect(wrapper.find("h1.profile-identity-name").exists()).toBe(true);
+        expect(wrapper.text()).not.toContain("Research interests");
         expect(wrapper.text()).toContain("Page settings");
         expect(wrapper.text()).toContain("This is your page as visitors see it.");
         expect(wrapper.text()).not.toContain("Your page is not published");
+
+        await wrapper.find("#profile-edit").trigger("click");
+
+        // every field becomes a real input, GitHub style
+        expect(wrapper.find("h1.profile-identity-name").exists()).toBe(false);
+        expect(wrapper.text()).toContain("Research interests");
+        expect(wrapper.findAll("input").length).toBeGreaterThan(2);
+        expect(wrapper.find("#profile-edit-save").exists()).toBe(true);
+        expect(wrapper.find("#profile-edit-cancel").exists()).toBe(true);
+    });
+
+    it("discards buffered identity edits on cancel", async () => {
+        mockEmptySections();
+        let putCount = 0;
+        server.use(
+            http.get("/api/users/{user_id}/profile", ({ response }) =>
+                response(200).json(publicProfile({ published: true }) as never),
+            ),
+            http.put("/api/users/{user_id}/profile", ({ response }) => {
+                putCount += 1;
+                return response(200).json(publicProfile({ published: true }) as never);
+            }),
+        );
+        const wrapper = await mountPage(TEST_USERNAME, TEST_USERNAME);
+
+        await wrapper.find("#profile-edit").trigger("click");
+        await wrapper.find("#profile-edit-cancel").trigger("click");
+
+        // nothing was sent and the editor closed
+        expect(putCount).toBe(0);
+        expect(wrapper.find(".click-to-edit-label").exists()).toBe(false);
+        expect(wrapper.find("#profile-edit").exists()).toBe(true);
+    });
+
+    it("keeps save disabled until an identity field changes", async () => {
+        mockEmptySections();
+        server.use(
+            http.get("/api/users/{user_id}/profile", ({ response }) =>
+                response(200).json(publicProfile({ published: true }) as never),
+            ),
+        );
+        const wrapper = await mountPage(TEST_USERNAME, TEST_USERNAME);
+
+        await wrapper.find("#profile-edit").trigger("click");
+
+        expect(wrapper.find("#profile-edit-save").attributes("aria-disabled")).toBe("true");
     });
 
     it("hides editing affordances in the owner's public preview", async () => {
@@ -163,6 +211,7 @@ describe("UserProfilePage.vue", () => {
         );
         const wrapper = await mountPage(TEST_USERNAME, TEST_USERNAME);
 
+        await wrapper.find("#profile-edit").trigger("click");
         await wrapper.find("#profile-public-view").trigger("click");
 
         expect(wrapper.text()).toContain("This is how visitors see your page.");
@@ -229,7 +278,7 @@ describe("UserProfilePage.vue", () => {
         await flushPromises();
 
         expect(wrapper.text()).toContain("Your page is not published");
-        expect(wrapper.find(".click-to-edit-label").exists()).toBe(true);
+        expect(wrapper.find("#profile-edit").exists()).toBe(true);
     });
 
     it("shows the unpublished banner with a publish action to the owner", async () => {

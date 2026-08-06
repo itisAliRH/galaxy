@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { faArrowLeft, faCog, faEye, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCheck, faCog, faEye, faPencilAlt, faSpinner } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { storeToRefs } from "pinia";
 import { computed, onMounted, ref, set, watch } from "vue";
@@ -51,6 +51,18 @@ const notFound = ref(false);
 const profile = ref<(PublicUserProfile & Partial<UserProfileDetail>) | null>(null);
 /** The owner previewing their page exactly as a visitor sees it. */
 const publicPreview = ref(false);
+/**
+ * The owner opted into editing their identity card. Section controls stay
+ * available throughout; only the profile column is gated, the way GitHub
+ * gates its profile sidebar behind "Edit profile".
+ */
+const identityEditRequested = ref(false);
+/**
+ * Identity edits are buffered while the card is open and committed as one
+ * request on Save, so Cancel can discard them. Section controls outside the
+ * card still persist immediately.
+ */
+const identityDraft = ref<Partial<UserProfileUpdatePayload>>({});
 /** Which sections reported whether they have published items, keyed by section key. */
 const sectionHasContent = ref<Record<string, boolean>>({});
 /** Monotonic guard so a stale response never overwrites a newer load. */
@@ -69,6 +81,11 @@ const isOwner = computed(
 const ownerMode = computed(() => isOwner.value && userId.value !== undefined && profile.value !== null);
 /** Editing affordances are hidden while the owner previews the public view. */
 const editing = computed(() => ownerMode.value && !publicPreview.value);
+/** The identity card additionally waits for the owner to click "Edit profile". */
+const editingIdentity = computed(() => editing.value && identityEditRequested.value);
+/** The identity card renders the buffered edits while they are unsaved. */
+const identityProfile = computed(() => (profile.value ? { ...profile.value, ...identityDraft.value } : null));
+const identityDirty = computed(() => Object.keys(identityDraft.value).length > 0);
 /** Visitor rules apply to real visitors and to the owner's public preview. */
 const asVisitor = computed(() => !ownerMode.value || publicPreview.value);
 
@@ -262,7 +279,33 @@ function onSectionLayoutUpdate(key: string, value: UserProfileSectionLayout) {
 }
 
 function onToggleSection(key: string, value: boolean) {
-    saveFields({ visible_sections: { ...profile.value?.visible_sections, [key]: value } });
+    const visible_sections = { ...identityProfile.value?.visible_sections, [key]: value };
+    // the About eye lives inside the identity card, so it follows Save/Cancel
+    if (editingIdentity.value && key === "about") {
+        stageIdentityFields({ visible_sections });
+        return;
+    }
+    saveFields({ visible_sections });
+}
+
+/** Buffer an identity edit; the card renders it immediately, the server sees it on Save. */
+function stageIdentityFields(fields: Partial<UserProfileUpdatePayload>): Promise<string | null> {
+    identityDraft.value = { ...identityDraft.value, ...fields };
+    return Promise.resolve(null);
+}
+
+async function saveIdentity() {
+    const fields = identityDraft.value;
+    identityEditRequested.value = false;
+    identityDraft.value = {};
+    if (Object.keys(fields).length > 0) {
+        await saveFields(fields);
+    }
+}
+
+function cancelIdentity() {
+    identityDraft.value = {};
+    identityEditRequested.value = false;
 }
 
 function onSectionLoaded(key: string, hasContent: boolean) {
@@ -336,28 +379,67 @@ watch([isOwner, userId], ([owner, id]) => {
                 :class="{ 'user-profile-layout-solo': soloIdentity }">
                 <aside class="user-profile-rail d-flex flex-column">
                     <ProfileIdentity
-                        :editable="editing"
+                        v-if="identityProfile"
+                        :editable="editingIdentity"
                         :max-links="maxLinks"
-                        :profile="profile"
-                        :save="editing ? saveFields : undefined"
-                        @toggle-about="onToggleSection('about', $event)" />
+                        :profile="identityProfile"
+                        :save="editingIdentity ? stageIdentityFields : undefined"
+                        @toggle-about="onToggleSection('about', $event)">
+                        <template v-slot:actions>
+                            <div v-if="editing" class="user-profile-owner-actions d-flex flex-column align-items-start">
+                                <GButton
+                                    v-if="!identityEditRequested"
+                                    id="profile-edit"
+                                    class="w-100"
+                                    color="grey"
+                                    size="small"
+                                    outline
+                                    @click="identityEditRequested = true">
+                                    <FontAwesomeIcon :icon="faPencilAlt" />
+                                    <span v-localize>Edit profile</span>
+                                </GButton>
 
-                    <div v-if="editing" class="user-profile-owner-actions d-flex flex-column align-items-start">
-                        <GButton
-                            id="profile-public-view"
-                            color="grey"
-                            size="small"
-                            outline
-                            @click="publicPreview = true">
-                            <FontAwesomeIcon :icon="faEye" />
-                            <span v-localize>Public view</span>
-                        </GButton>
+                                <div v-else class="user-profile-edit-actions d-flex w-100">
+                                    <GButton
+                                        id="profile-edit-save"
+                                        class="flex-fill"
+                                        color="blue"
+                                        size="small"
+                                        :disabled="!identityDirty"
+                                        @click="saveIdentity">
+                                        <FontAwesomeIcon :icon="faCheck" />
+                                        <span v-localize>Save</span>
+                                    </GButton>
 
-                        <router-link class="user-profile-settings-link" to="/user/profile-settings">
-                            <FontAwesomeIcon :icon="faCog" />
-                            Page settings
-                        </router-link>
-                    </div>
+                                    <GButton
+                                        id="profile-edit-cancel"
+                                        class="flex-fill"
+                                        color="grey"
+                                        size="small"
+                                        outline
+                                        @click="cancelIdentity">
+                                        <span v-localize>Cancel</span>
+                                    </GButton>
+                                </div>
+
+                                <GButton
+                                    id="profile-public-view"
+                                    class="w-100"
+                                    color="grey"
+                                    size="small"
+                                    outline
+                                    @click="publicPreview = true">
+                                    <FontAwesomeIcon :icon="faEye" />
+                                    <span v-localize>Public view</span>
+                                </GButton>
+
+                                <router-link class="user-profile-settings-link" to="/user/profile-settings">
+                                    <FontAwesomeIcon :icon="faCog" />
+                                    Page settings
+                                </router-link>
+                            </div>
+                        </template>
+                    </ProfileIdentity>
                 </aside>
 
                 <!-- v-show, not v-if: the cards must mount to fetch and report content,
@@ -498,8 +580,13 @@ watch([isOwner, userId], ([owner, id]) => {
         gap: 0.5rem;
     }
 
+    .user-profile-edit-actions {
+        gap: 0.5rem;
+    }
+
     .user-profile-settings-link {
         font-size: 0.9rem;
+        cursor: pointer;
     }
 }
 </style>

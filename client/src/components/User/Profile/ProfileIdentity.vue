@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { faBuilding, faDice, faExternalLinkAlt, faEye, faEyeSlash, faUndo } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { BFormGroup, BFormInput, BFormTextarea } from "bootstrap-vue";
 import { computed, ref } from "vue";
 
 import type { components } from "@/api/schema";
-import { orcidUrl, validateOrcid } from "@/utils/orcid";
+import { useUid } from "@/composables/utils/uid";
+import { ORCID_FORMAT, orcidUrl, validateOrcid } from "@/utils/orcid";
 
 import ProfileAvatar from "./ProfileAvatar.vue";
 import ProfileLinksEditor from "./ProfileLinksEditor.vue";
-import ClickToEdit from "@/components/Collections/common/ClickToEdit.vue";
+import GButton from "@/components/BaseComponents/GButton.vue";
 
 type PublicUserProfile = components["schemas"]["PublicUserProfile"];
 type UserProfileLink = components["schemas"]["UserProfileLink"];
@@ -48,6 +50,12 @@ const emit = defineEmits<{
 }>();
 
 const orcidError = ref<string | null>(null);
+
+const nameId = useUid("profile-name-");
+const bioId = useUid("profile-bio-");
+const affiliationId = useUid("profile-affiliation-");
+const interestsId = useUid("profile-interests-");
+const orcidId = useUid("profile-orcid-");
 
 const displayName = computed(() => props.profile.display_name || props.profile.username);
 const showHandle = computed(() => displayName.value !== props.profile.username);
@@ -113,119 +121,112 @@ function resetAvatar() {
                 :size="180" />
 
             <div v-if="props.editable" class="profile-identity-avatar-actions position-absolute d-flex flex-gapx-1">
-                <button
+                <GButton
                     class="border-0 rounded-circle"
-                    type="button"
+                    color="grey"
+                    size="large"
+                    icon-only
                     title="Shuffle avatar"
                     aria-label="Shuffle avatar"
                     @click="randomizeAvatar">
                     <FontAwesomeIcon :icon="faDice" fixed-width />
-                </button>
+                </GButton>
 
-                <button
+                <GButton
                     v-if="props.profile.avatar_seed"
                     class="border-0 rounded-circle"
-                    type="button"
+                    color="grey"
+                    size="large"
+                    icon-only
                     title="Reset avatar to default"
                     aria-label="Reset avatar to default"
                     @click="resetAvatar">
                     <FontAwesomeIcon :icon="faUndo" fixed-width />
-                </button>
+                </GButton>
             </div>
         </div>
 
-        <ClickToEdit
-            v-if="props.editable"
-            class="profile-identity-name font-weight-bold border-bottom-0 mt-2 mb-0 pb-0"
-            component="h1"
-            title="Add a display name"
-            :value="props.profile.display_name || ''"
-            @input="onDisplayNameInput" />
-        <h1 v-else class="profile-identity-name font-weight-bold border-bottom-0 mt-2 mb-0 pb-0">{{ displayName }}</h1>
+        <!-- Edit mode is a plain form: every field is an input from the start,
+             the way GitHub's profile sidebar behaves. -->
+        <template v-if="props.editable">
+            <BFormGroup label="Name" :label-for="nameId" class="mt-2 mb-2">
+                <BFormInput
+                    :id="nameId"
+                    :placeholder="props.profile.username"
+                    size="sm"
+                    :value="props.profile.display_name ?? ''"
+                    @update="onDisplayNameInput" />
+            </BFormGroup>
 
-        <div v-if="showHandle || props.editable" class="profile-identity-handle">{{ props.profile.username }}</div>
+            <div class="profile-identity-handle">{{ props.profile.username }}</div>
 
-        <div
-            v-if="props.editable"
-            class="profile-identity-about-header d-flex align-items-center justify-content-between mt-2">
-            <span v-localize class="profile-identity-about-title font-weight-bold text-uppercase">About</span>
+            <slot name="actions" />
 
-            <button
-                class="profile-identity-eye border-0 p-1"
-                type="button"
-                :title="aboutToggleLabel"
-                :aria-label="aboutToggleLabel"
-                @click="emit('toggle-about', !aboutVisible)">
-                <FontAwesomeIcon :icon="aboutVisible ? faEye : faEyeSlash" fixed-width />
-            </button>
-        </div>
+            <div class="profile-identity-about-header d-flex align-items-center justify-content-between mt-2">
+                <span v-localize class="profile-identity-about-title font-weight-bold text-uppercase">About</span>
 
-        <div v-if="props.editable && !aboutVisible" v-localize class="profile-identity-hidden-note font-italic">
-            Hidden — only you can see this section.
-        </div>
+                <GButton
+                    class="profile-identity-eye"
+                    color="grey"
+                    size="medium"
+                    icon-only
+                    transparent
+                    :title="aboutToggleLabel"
+                    :aria-label="aboutToggleLabel"
+                    @click="emit('toggle-about', !aboutVisible)">
+                    <FontAwesomeIcon :icon="aboutVisible ? faEye : faEyeSlash" fixed-width />
+                </GButton>
+            </div>
 
-        <template v-if="showAbout">
+            <div v-if="!aboutVisible" v-localize class="profile-identity-hidden-note font-italic">
+                Hidden — only you can see this section.
+            </div>
+
             <div
                 class="profile-identity-about d-flex flex-column"
                 :class="{ 'profile-identity-about-dimmed': !aboutVisible }">
-                <ClickToEdit
-                    v-if="props.editable"
-                    class="profile-identity-description mt-1 mb-0"
-                    component="p"
-                    multiline
-                    title="Add a short description"
-                    :value="props.profile.description || ''"
-                    @input="onDescriptionInput" />
-                <p v-else-if="props.profile.description" class="profile-identity-description mt-1 mb-0">
-                    {{ props.profile.description }}
-                </p>
+                <BFormGroup label="Bio" :label-for="bioId" class="mb-2">
+                    <BFormTextarea
+                        :id="bioId"
+                        no-resize
+                        placeholder="A short line shown under your name"
+                        rows="3"
+                        size="sm"
+                        :value="props.profile.description ?? ''"
+                        @update="onDescriptionInput" />
+                </BFormGroup>
 
-                <hr
-                    v-if="props.editable || props.profile.affiliation || orcidLink || links.length > 0"
-                    class="profile-identity-rule w-100 my-2" />
+                <BFormGroup label="Affiliation" :label-for="affiliationId" class="mb-2">
+                    <BFormInput
+                        :id="affiliationId"
+                        size="sm"
+                        :value="props.profile.affiliation ?? ''"
+                        @update="onAffiliationInput" />
+                </BFormGroup>
 
-                <div class="profile-identity-meta d-flex flex-column">
-                    <div
-                        v-if="props.editable || props.profile.affiliation"
-                        class="profile-identity-row d-flex align-items-center">
-                        <FontAwesomeIcon :icon="faBuilding" fixed-width />
+                <BFormGroup label="Research interests" :label-for="interestsId" class="mb-2">
+                    <BFormTextarea
+                        :id="interestsId"
+                        no-resize
+                        rows="3"
+                        size="sm"
+                        :value="props.profile.research_interests ?? ''"
+                        @update="onInterestsInput" />
+                </BFormGroup>
 
-                        <ClickToEdit
-                            v-if="props.editable"
-                            title="Add your affiliation"
-                            :value="props.profile.affiliation || ''"
-                            @input="onAffiliationInput" />
-                        <span v-else>{{ props.profile.affiliation }}</span>
-                    </div>
-
-                    <div v-if="props.editable || orcidLink" class="profile-identity-row d-flex align-items-center">
-                        <span
-                            class="profile-identity-orcid-badge d-inline-flex align-items-center justify-content-center rounded-circle font-weight-bold"
-                            aria-hidden="true"
-                            >iD</span
-                        >
-
-                        <ClickToEdit
-                            v-if="props.editable"
-                            class="profile-identity-orcid"
-                            title="Add your ORCID iD"
-                            :value="props.profile.orcid || ''"
-                            @input="onOrcidInput" />
-                        <a
-                            v-else-if="orcidLink"
-                            class="profile-identity-orcid"
-                            :href="orcidLink"
-                            rel="noopener noreferrer"
-                            target="_blank">
-                            {{ props.profile.orcid }}
-                            <FontAwesomeIcon class="profile-identity-external" :icon="faExternalLinkAlt" size="xs" />
-                        </a>
-                    </div>
+                <BFormGroup label="ORCID iD" :label-for="orcidId" class="mb-2">
+                    <BFormInput
+                        :id="orcidId"
+                        :placeholder="ORCID_FORMAT"
+                        size="sm"
+                        :state="orcidError ? false : null"
+                        :value="props.profile.orcid ?? ''"
+                        @update="onOrcidInput" />
 
                     <div v-if="orcidError" class="profile-identity-error">{{ orcidError }}</div>
 
                     <a
-                        v-if="props.editable && orcidLink && !orcidError"
+                        v-else-if="orcidLink"
                         class="profile-identity-orcid-preview"
                         :href="orcidLink"
                         rel="noopener noreferrer"
@@ -233,26 +234,61 @@ function resetAvatar() {
                         View ORCID record
                         <FontAwesomeIcon class="profile-identity-external" :icon="faExternalLinkAlt" size="xs" />
                     </a>
+                </BFormGroup>
 
+                <BFormGroup label="Links" class="mb-0">
                     <ProfileLinksEditor
-                        :editable="props.editable"
+                        editable
                         :links="links"
                         :max-links="props.maxLinks"
                         @update:links="onLinksUpdate" />
+                </BFormGroup>
+            </div>
+        </template>
+
+        <template v-else>
+            <h1 class="profile-identity-name font-weight-bold border-bottom-0 mt-2 mb-0 pb-0">{{ displayName }}</h1>
+
+            <div v-if="showHandle" class="profile-identity-handle">{{ props.profile.username }}</div>
+
+            <p v-if="showAbout && props.profile.description" class="profile-identity-description mt-1 mb-0">
+                {{ props.profile.description }}
+            </p>
+
+            <slot name="actions" />
+
+            <template v-if="showAbout">
+                <hr
+                    v-if="props.profile.affiliation || orcidLink || links.length > 0"
+                    class="profile-identity-rule w-100 my-2" />
+
+                <div class="profile-identity-meta d-flex flex-column">
+                    <div v-if="props.profile.affiliation" class="profile-identity-row d-flex align-items-center">
+                        <FontAwesomeIcon :icon="faBuilding" fixed-width />
+
+                        <span>{{ props.profile.affiliation }}</span>
+                    </div>
+
+                    <div v-if="orcidLink" class="profile-identity-row d-flex align-items-center">
+                        <span
+                            class="profile-identity-orcid-badge d-inline-flex align-items-center justify-content-center rounded-circle font-weight-bold"
+                            aria-hidden="true"
+                            >iD</span
+                        >
+
+                        <a class="profile-identity-orcid" :href="orcidLink" rel="noopener noreferrer" target="_blank">
+                            {{ props.profile.orcid }}
+                            <FontAwesomeIcon class="profile-identity-external" :icon="faExternalLinkAlt" size="xs" />
+                        </a>
+                    </div>
+
+                    <ProfileLinksEditor :links="links" :max-links="props.maxLinks" />
                 </div>
 
-                <ClickToEdit
-                    v-if="props.editable"
-                    class="profile-identity-interests mt-2 mb-0"
-                    component="p"
-                    multiline
-                    title="Add your research interests"
-                    :value="props.profile.research_interests || ''"
-                    @input="onInterestsInput" />
-                <p v-else-if="props.profile.research_interests" class="profile-identity-interests mt-2 mb-0">
+                <p v-if="props.profile.research_interests" class="profile-identity-interests mt-2 mb-0">
                     {{ props.profile.research_interests }}
                 </p>
-            </div>
+            </template>
         </template>
     </div>
 </template>
@@ -267,11 +303,14 @@ function resetAvatar() {
             right: 0.5rem;
             bottom: 0.5rem;
 
-            button {
-                background: rgba(255, 255, 255, 0.9);
-                box-shadow: 0 1px 3px rgba(44, 49, 67, 0.3);
-                padding: 0.4rem;
+            // The disc floating over the avatar is not a GButton variant, so
+            // its fill and lift stay local. The lift is a `drop-shadow` filter
+            // rather than a `box-shadow`: GButton draws its focus ring with
+            // `box-shadow`, and a local one here would outrank and erase it.
+            .g-button {
+                background-color: rgba(255, 255, 255, 0.9);
                 color: var(--color-galaxy-dark);
+                filter: drop-shadow(0 1px 1.5px rgba(44, 49, 67, 0.3));
             }
         }
     }
@@ -299,11 +338,10 @@ function resetAvatar() {
     }
 
     .profile-identity-eye {
-        background: none;
-        color: inherit;
         opacity: 0.6;
 
-        &:hover {
+        &:hover,
+        &:focus-visible {
             opacity: 1;
         }
     }
