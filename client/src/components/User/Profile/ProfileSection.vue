@@ -9,6 +9,7 @@ import { useUid } from "@/composables/utils/uid";
 
 import { MIN_SECTION_ITEMS } from "./sections";
 
+import GButton from "@/components/BaseComponents/GButton.vue";
 import Heading from "@/components/Common/Heading.vue";
 
 interface Props {
@@ -170,15 +171,18 @@ function onLimitChange(value: string) {
                         @input="onLimitInput" />
                 </label>
 
-                <button
+                <GButton
                     v-if="props.editable"
-                    class="profile-section-eye border-0 p-1"
-                    type="button"
+                    class="profile-section-eye"
+                    color="grey"
+                    size="medium"
+                    icon-only
+                    transparent
                     :title="visibilityLabel"
                     :aria-label="visibilityLabel"
                     @click="emit('toggle-visible', !props.visible)">
                     <FontAwesomeIcon :icon="visibilityIcon" fixed-width />
-                </button>
+                </GButton>
             </div>
         </div>
 
@@ -229,18 +233,24 @@ function onLimitChange(value: string) {
     .profile-section-controls {
         gap: 0.75rem;
 
+        // Both controls are labels that hand focus to their input on click, so
+        // the label chrome reads as clickable while the input keeps its own
+        // cursor: a caret for the search box, a pointer for the range thumb.
         .profile-section-search {
             gap: 0.35rem;
             opacity: 0.85;
+            cursor: pointer;
 
             input {
                 width: 8rem;
                 max-width: 100%;
+                cursor: auto;
             }
         }
 
         .profile-section-limit {
             gap: 0.5rem;
+            cursor: pointer;
 
             .profile-section-limit-value {
                 font-size: 0.8rem;
@@ -249,12 +259,15 @@ function onLimitChange(value: string) {
 
             input {
                 width: 90px;
+                cursor: pointer;
+
+                &:disabled {
+                    cursor: default;
+                }
             }
         }
 
         .profile-section-eye {
-            background: none;
-            color: inherit;
             opacity: 0.6;
 
             &:hover,

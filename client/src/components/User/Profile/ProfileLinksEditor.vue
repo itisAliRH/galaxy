@@ -152,23 +152,27 @@ function removeLink(index: number) {
                 </a>
 
                 <span v-if="props.editable" class="profile-links-actions d-inline-flex flex-gapx-1">
-                    <button
-                        class="border-0"
-                        type="button"
+                    <GButton
+                        color="grey"
+                        size="small"
+                        icon-only
+                        transparent
                         title="Edit link"
                         aria-label="Edit link"
                         @click="startEdit(index)">
                         <FontAwesomeIcon :icon="faPencilAlt" fixed-width />
-                    </button>
+                    </GButton>
 
-                    <button
-                        class="border-0"
-                        type="button"
+                    <GButton
+                        color="grey"
+                        size="small"
+                        icon-only
+                        transparent
                         title="Remove link"
                         aria-label="Remove link"
                         @click="removeLink(index)">
                         <FontAwesomeIcon :icon="faTrash" fixed-width />
-                    </button>
+                    </GButton>
                 </span>
             </div>
 
@@ -178,13 +182,27 @@ function removeLink(index: number) {
                 <BFormInput v-model="draftLabel" placeholder="Label (optional)" size="sm" @keyup.enter="commitEdit" />
 
                 <span class="profile-links-editor-actions d-inline-flex justify-content-end flex-gapx-1">
-                    <button class="border-0" type="button" title="Save link" aria-label="Save link" @click="commitEdit">
+                    <GButton
+                        color="grey"
+                        size="small"
+                        icon-only
+                        transparent
+                        title="Save link"
+                        aria-label="Save link"
+                        @click="commitEdit">
                         <FontAwesomeIcon :icon="faCheck" fixed-width />
-                    </button>
+                    </GButton>
 
-                    <button class="border-0" type="button" title="Cancel" aria-label="Cancel" @click="cancelEdit">
+                    <GButton
+                        color="grey"
+                        size="small"
+                        icon-only
+                        transparent
+                        title="Cancel"
+                        aria-label="Cancel"
+                        @click="cancelEdit">
                         <FontAwesomeIcon :icon="faTimes" fixed-width />
-                    </button>
+                    </GButton>
                 </span>
             </div>
         </template>
@@ -197,13 +215,27 @@ function removeLink(index: number) {
             <BFormInput v-model="draftLabel" placeholder="Label (optional)" size="sm" @keyup.enter="commitEdit" />
 
             <span class="profile-links-editor-actions d-inline-flex justify-content-end flex-gapx-1">
-                <button class="border-0" type="button" title="Save link" aria-label="Save link" @click="commitEdit">
+                <GButton
+                    color="grey"
+                    size="small"
+                    icon-only
+                    transparent
+                    title="Save link"
+                    aria-label="Save link"
+                    @click="commitEdit">
                     <FontAwesomeIcon :icon="faCheck" fixed-width />
-                </button>
+                </GButton>
 
-                <button class="border-0" type="button" title="Cancel" aria-label="Cancel" @click="cancelEdit">
+                <GButton
+                    color="grey"
+                    size="small"
+                    icon-only
+                    transparent
+                    title="Cancel"
+                    aria-label="Cancel"
+                    @click="cancelEdit">
                     <FontAwesomeIcon :icon="faTimes" fixed-width />
-                </button>
+                </GButton>
             </span>
         </div>
 
@@ -244,12 +276,11 @@ function removeLink(index: number) {
         gap: 0.35rem;
     }
 
+    // GButton supplies the transparent background, padding, colour, and focus
+    // ring; only the resting dimming of these secondary actions is local.
     .profile-links-actions,
     .profile-links-editor-actions {
-        button {
-            background: none;
-            padding: 0.15rem 0.25rem;
-            color: inherit;
+        .g-button {
             opacity: 0.55;
 
             &:hover,
