@@ -6,6 +6,9 @@
  * (pins, manual order, item limit) client side, so the page renders the
  * same for the owner and for anonymous visitors.
  */
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import { faChartBar, faFile, faHdd, faSitemap, faWrench } from "@fortawesome/free-solid-svg-icons";
+
 import { GalaxyApi } from "@/api";
 import { getPublishedHistories } from "@/api/histories";
 import { loadWorkflows } from "@/api/workflows";
@@ -22,6 +25,9 @@ export const DEFAULT_SECTION_ITEMS = 5;
 /** Key of the starred-tools section; its data comes from the profile payload, not a fetcher. */
 export const TOOLS_SECTION_KEY = "tools";
 
+/** Icon for the starred-tools section; the other sections carry their own. */
+export const TOOLS_SECTION_ICON = faWrench;
+
 export type ProfileColumn = "main" | "side";
 
 export interface ProfileListItem {
@@ -33,6 +39,8 @@ export interface ProfileListItem {
 export interface ProfileSectionDefinition {
     key: string;
     label: string;
+    /** Icon shown next to the section heading. */
+    icon: IconDefinition;
     /** Which page column the section renders in. */
     column: ProfileColumn;
     /** Hint shown to the owner when the section has no published items yet. */
@@ -132,6 +140,7 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
     {
         key: "histories",
         label: "Published histories",
+        icon: faHdd,
         column: "main",
         emptyHint: "No published histories yet. Published histories show up here automatically.",
         itemUrl: (item) => `/published/history?id=${item.id}`,
@@ -141,6 +150,7 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
     {
         key: "workflows",
         label: "Published workflows",
+        icon: faSitemap,
         column: "main",
         emptyHint: "No published workflows yet. Published workflows show up here automatically.",
         itemUrl: (item) => `/published/workflow?id=${item.id}`,
@@ -150,6 +160,7 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
     {
         key: "pages",
         label: "Published pages",
+        icon: faFile,
         column: "main",
         emptyHint: "No published pages yet. Published pages show up here automatically.",
         itemUrl: (item) => `/published/page?id=${item.id}`,
@@ -159,6 +170,7 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
     {
         key: "visualizations",
         label: "Published visualizations",
+        icon: faChartBar,
         column: "side",
         emptyHint: "No published visualizations yet. Published visualizations show up here automatically.",
         itemUrl: (item) => `/published/visualization?id=${item.id}`,

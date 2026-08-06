@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faEye, faEyeSlash, faGripVertical, faSearch } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { BFormInput } from "bootstrap-vue";
@@ -20,6 +21,11 @@ interface Props {
      * @default undefined
      */
     count?: number;
+    /**
+     * Icon shown to the left of the heading
+     * @default undefined
+     */
+    icon?: IconDefinition;
     /**
      * Whether the owner is viewing: shows the eye, limit, and drag controls
      * @default false
@@ -61,6 +67,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
     count: undefined,
     editable: false,
+    icon: undefined,
     limit: undefined,
     maxItems: 20,
     search: undefined,
@@ -110,7 +117,7 @@ function onLimitChange(value: string) {
 
 <template>
     <section class="profile-section" :class="{ 'profile-section-hidden': !props.visible }">
-        <div class="profile-section-header mb-2">
+        <div class="profile-section-header d-flex align-items-center flex-wrap mb-2">
             <span
                 v-if="props.editable"
                 class="profile-section-drag-handle"
@@ -119,13 +126,21 @@ function onLimitChange(value: string) {
                 <FontAwesomeIcon :icon="faGripVertical" />
             </span>
 
-            <Heading h2 size="md" class="profile-section-heading">
+            <!-- the icon lives inside the <h2> so the brand rule and its
+                 padding run under the icon as well as the title -->
+            <Heading h2 size="md" class="profile-section-heading mb-0">
+                <FontAwesomeIcon v-if="props.icon" class="profile-section-icon mr-1" :icon="props.icon" fixed-width />
                 {{ props.title }}
-                <span v-if="props.count !== undefined" class="profile-section-count">{{ props.count }}</span>
+                <span v-if="props.count !== undefined" class="profile-section-count font-weight-normal ml-1">{{
+                    props.count
+                }}</span>
             </Heading>
 
-            <div class="profile-section-controls">
-                <label v-if="props.searchable" :for="searchId" class="profile-section-search">
+            <div class="profile-section-controls d-flex align-items-center flex-wrap justify-content-end ml-auto">
+                <label
+                    v-if="props.searchable"
+                    :for="searchId"
+                    class="profile-section-search d-flex align-items-center mb-0">
                     <FontAwesomeIcon :icon="faSearch" />
                     <BFormInput
                         :id="searchId"
@@ -140,8 +155,8 @@ function onLimitChange(value: string) {
                 <label
                     v-if="props.editable && props.showLimit && props.limit !== undefined"
                     :for="limitId"
-                    class="profile-section-limit">
-                    <span class="profile-section-limit-value">show {{ liveLimit }}</span>
+                    class="profile-section-limit d-flex align-items-center mb-0">
+                    <span class="profile-section-limit-value text-nowrap">show {{ liveLimit }}</span>
                     <BFormInput
                         :id="limitId"
                         :disabled="!props.visible"
@@ -157,7 +172,7 @@ function onLimitChange(value: string) {
 
                 <button
                     v-if="props.editable"
-                    class="profile-section-eye"
+                    class="profile-section-eye border-0 p-1"
                     type="button"
                     :title="visibilityLabel"
                     :aria-label="visibilityLabel"
@@ -167,7 +182,7 @@ function onLimitChange(value: string) {
             </div>
         </div>
 
-        <div v-if="props.editable && !props.visible" v-localize class="profile-section-hidden-note">
+        <div v-if="props.editable && !props.visible" v-localize class="profile-section-hidden-note font-italic mt-1">
             Hidden — only you can see this section.
         </div>
 
@@ -178,9 +193,6 @@ function onLimitChange(value: string) {
 <style scoped lang="scss">
 .profile-section {
     .profile-section-header {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
         gap: 0.5rem;
 
         .profile-section-heading {
@@ -188,15 +200,16 @@ function onLimitChange(value: string) {
             // controls wrap to their own line first
             flex: 1 1 12rem;
             min-width: 0;
-            margin-bottom: 0;
         }
 
         .profile-section-count {
-            font-weight: 400;
             font-size: 0.9rem;
             opacity: 0.7;
-            margin-left: 0.25rem;
         }
+    }
+
+    .profile-section-icon {
+        color: var(--color-galaxy-primary);
     }
 
     .profile-section-drag-handle {
@@ -214,18 +227,10 @@ function onLimitChange(value: string) {
     }
 
     .profile-section-controls {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        justify-content: flex-end;
         gap: 0.75rem;
-        margin-left: auto;
 
         .profile-section-search {
-            display: flex;
-            align-items: center;
             gap: 0.35rem;
-            margin-bottom: 0;
             opacity: 0.85;
 
             input {
@@ -235,14 +240,10 @@ function onLimitChange(value: string) {
         }
 
         .profile-section-limit {
-            display: flex;
-            align-items: center;
             gap: 0.5rem;
-            margin-bottom: 0;
 
             .profile-section-limit-value {
                 font-size: 0.8rem;
-                white-space: nowrap;
                 opacity: 0.7;
             }
 
@@ -252,9 +253,7 @@ function onLimitChange(value: string) {
         }
 
         .profile-section-eye {
-            border: none;
             background: none;
-            padding: 0.25rem;
             color: inherit;
             opacity: 0.6;
 
@@ -267,9 +266,7 @@ function onLimitChange(value: string) {
 
     .profile-section-hidden-note {
         font-size: 0.85rem;
-        font-style: italic;
         opacity: 0.7;
-        margin-top: 0.25rem;
     }
 
     &.profile-section-hidden {

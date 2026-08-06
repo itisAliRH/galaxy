@@ -82,7 +82,7 @@ watch(userId, loadProfile, { immediate: true });
     <section class="profile-settings">
         <BreadcrumbHeading :items="breadcrumbItems" />
 
-        <div v-localize class="profile-settings-description">
+        <div v-localize class="profile-settings-description mb-3">
             Control whether you have a public profile page. Your page only ever lists content you have already
             published.
         </div>
@@ -96,15 +96,15 @@ watch(userId, loadProfile, { immediate: true });
         </GAlert>
 
         <div v-else class="profile-settings-body">
-            <div class="card-container">
+            <div class="card-container my-2 p-3">
                 <GCheckbox id="profile-published" toggle :value="published" @input="onTogglePublished">
                     <span v-localize>Enable my public page</span>
                 </GCheckbox>
 
-                <div class="profile-url-hint">
+                <div class="profile-url-hint mt-2">
                     <span v-if="published" v-localize>Anyone with the link can see it, signed in or not:</span>
                     <span v-else v-localize>Only you can see it until you enable your page:</span>
-                    <router-link class="profile-url" :to="profilePath">{{ profileUrl }}</router-link>
+                    <router-link class="profile-url ml-1" :to="profilePath">{{ profileUrl }}</router-link>
                 </div>
 
                 <div class="profile-username-hint">
@@ -116,7 +116,7 @@ watch(userId, loadProfile, { immediate: true });
                 </div>
             </div>
 
-            <div class="profile-edit-hint">
+            <div class="profile-edit-hint mt-2">
                 <span v-localize>
                     To change what your page shows — avatar, description, links, and sections — open your page and edit
                     it directly.
@@ -129,16 +129,9 @@ watch(userId, loadProfile, { immediate: true });
 
 <style scoped lang="scss">
 .profile-settings {
-    .profile-settings-description {
-        margin-bottom: 1rem;
-    }
-
     .profile-url-hint {
-        margin-top: 0.5rem;
-
         .profile-url {
             font-family: monospace;
-            margin-left: 0.25rem;
         }
     }
 
@@ -151,15 +144,9 @@ watch(userId, loadProfile, { immediate: true });
     .profile-username-hint {
         margin-top: 0.75rem;
     }
-
-    .profile-edit-hint {
-        margin-top: 0.5rem;
-    }
 }
 
 .card-container {
-    margin: 0.5rem 0;
-    padding: 1rem;
     border: 1px solid #dee2e6;
     border-radius: 0.5rem;
 }

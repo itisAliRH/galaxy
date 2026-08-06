@@ -184,6 +184,7 @@ onMounted(load);
         v-if="showCard"
         :count="total"
         :editable="props.editable"
+        :icon="props.definition.icon"
         :limit="limit"
         :max-items="props.maxItems"
         :search="search"
@@ -194,7 +195,7 @@ onMounted(load);
         @toggle-visible="emit('toggle-visible', $event)"
         @update:limit="onLimitChange"
         @update:search="search = $event">
-        <div v-if="!loading && items.length > 0" class="gx-card profile-list">
+        <div v-if="!loading && items.length > 0" class="gx-card profile-list d-flex flex-column">
             <draggable
                 v-model="displayedItems"
                 :disabled="dragDisabled"
@@ -205,7 +206,7 @@ onMounted(load);
                 <div
                     v-for="item in displayedItems"
                     :key="item.id"
-                    class="gx-row-accent profile-list-item"
+                    class="gx-row-accent profile-list-item d-flex align-items-center"
                     :class="{ 'profile-list-item-pinned': isPinned(item) }">
                     <span
                         v-if="props.editable"
@@ -215,8 +216,10 @@ onMounted(load);
                         <FontAwesomeIcon :icon="faGripLines" fixed-width />
                     </span>
 
-                    <router-link class="profile-list-link" :to="props.definition.itemUrl(item)">
-                        <span class="profile-list-name">{{ item.name }}</span>
+                    <router-link
+                        class="profile-list-link d-flex flex-column flex-fill"
+                        :to="props.definition.itemUrl(item)">
+                        <span class="profile-list-name font-weight-bold">{{ item.name }}</span>
 
                         <span v-if="item.updateTime" class="profile-list-meta">
                             updated <UtcDate :date="item.updateTime" mode="elapsed" />
@@ -231,7 +234,7 @@ onMounted(load);
 
                     <button
                         v-if="props.editable"
-                        class="profile-list-pin"
+                        class="profile-list-pin border-0 p-1"
                         :class="{ 'profile-list-pin-active': isPinned(item) }"
                         type="button"
                         :disabled="!props.visible"
@@ -243,19 +246,19 @@ onMounted(load);
                 </div>
             </draggable>
 
-            <div v-if="searching && displayedItems.length === 0" v-localize class="profile-list-empty">
+            <div v-if="searching && displayedItems.length === 0" v-localize class="profile-list-empty font-italic">
                 No items match the search.
             </div>
 
             <router-link
                 v-if="!searching && total > limit"
-                class="profile-list-more"
+                class="profile-list-more align-self-start"
                 :to="props.definition.listUrl(props.username)">
                 View all {{ total }} →
             </router-link>
         </div>
 
-        <div v-else-if="!loading && props.editable" v-localize class="profile-list-empty">
+        <div v-else-if="!loading && props.editable" v-localize class="profile-list-empty font-italic">
             {{ props.definition.emptyHint }}
         </div>
     </ProfileSection>
@@ -263,13 +266,9 @@ onMounted(load);
 
 <style scoped lang="scss">
 .profile-list {
-    display: flex;
-    flex-direction: column;
     gap: 0.5rem;
 
     .profile-list-item {
-        display: flex;
-        align-items: center;
         gap: 0.5rem;
         padding: 0.5rem 0.75rem 0.5rem 0.9rem;
         border: 1px solid rgba(37, 83, 123, 0.12);
@@ -304,11 +303,8 @@ onMounted(load);
     }
 
     .profile-list-link {
-        flex: 1 1 auto;
         min-width: 0;
         overflow-wrap: anywhere;
-        display: flex;
-        flex-direction: column;
         gap: 0.15rem;
         text-decoration: none;
 
@@ -317,7 +313,6 @@ onMounted(load);
         }
 
         .profile-list-name {
-            font-weight: 700;
             color: var(--color-galaxy-dark);
         }
 
@@ -333,9 +328,7 @@ onMounted(load);
     }
 
     .profile-list-pin {
-        border: none;
         background: none;
-        padding: 0.25rem;
         color: inherit;
         opacity: 0;
 
@@ -366,13 +359,11 @@ onMounted(load);
     .profile-list-more {
         font-size: 0.85rem;
         font-weight: 600;
-        align-self: flex-start;
     }
 }
 
 .profile-list-empty {
     font-size: 0.9rem;
-    font-style: italic;
     opacity: 0.7;
 }
 </style>

@@ -105,20 +105,26 @@ function resetAvatar() {
 </script>
 
 <template>
-    <div class="profile-identity">
-        <div class="profile-identity-avatar">
+    <div class="profile-identity d-flex flex-column">
+        <div class="profile-identity-avatar position-relative align-self-center">
             <ProfileAvatar
                 :username="props.profile.username"
                 :seed="props.profile.avatar_seed ?? undefined"
                 :size="180" />
 
-            <div v-if="props.editable" class="profile-identity-avatar-actions">
-                <button type="button" title="Shuffle avatar" aria-label="Shuffle avatar" @click="randomizeAvatar">
+            <div v-if="props.editable" class="profile-identity-avatar-actions position-absolute d-flex flex-gapx-1">
+                <button
+                    class="border-0 rounded-circle"
+                    type="button"
+                    title="Shuffle avatar"
+                    aria-label="Shuffle avatar"
+                    @click="randomizeAvatar">
                     <FontAwesomeIcon :icon="faDice" fixed-width />
                 </button>
 
                 <button
                     v-if="props.profile.avatar_seed"
+                    class="border-0 rounded-circle"
                     type="button"
                     title="Reset avatar to default"
                     aria-label="Reset avatar to default"
@@ -130,20 +136,22 @@ function resetAvatar() {
 
         <ClickToEdit
             v-if="props.editable"
-            class="profile-identity-name"
+            class="profile-identity-name font-weight-bold border-bottom-0 mt-2 mb-0 pb-0"
             component="h1"
             title="Add a display name"
             :value="props.profile.display_name || ''"
             @input="onDisplayNameInput" />
-        <h1 v-else class="profile-identity-name">{{ displayName }}</h1>
+        <h1 v-else class="profile-identity-name font-weight-bold border-bottom-0 mt-2 mb-0 pb-0">{{ displayName }}</h1>
 
         <div v-if="showHandle || props.editable" class="profile-identity-handle">{{ props.profile.username }}</div>
 
-        <div v-if="props.editable" class="profile-identity-about-header">
-            <span v-localize class="profile-identity-about-title">About</span>
+        <div
+            v-if="props.editable"
+            class="profile-identity-about-header d-flex align-items-center justify-content-between mt-2">
+            <span v-localize class="profile-identity-about-title font-weight-bold text-uppercase">About</span>
 
             <button
-                class="profile-identity-eye"
+                class="profile-identity-eye border-0 p-1"
                 type="button"
                 :title="aboutToggleLabel"
                 :aria-label="aboutToggleLabel"
@@ -152,30 +160,34 @@ function resetAvatar() {
             </button>
         </div>
 
-        <div v-if="props.editable && !aboutVisible" v-localize class="profile-identity-hidden-note">
+        <div v-if="props.editable && !aboutVisible" v-localize class="profile-identity-hidden-note font-italic">
             Hidden — only you can see this section.
         </div>
 
         <template v-if="showAbout">
-            <div class="profile-identity-about" :class="{ 'profile-identity-about-dimmed': !aboutVisible }">
+            <div
+                class="profile-identity-about d-flex flex-column"
+                :class="{ 'profile-identity-about-dimmed': !aboutVisible }">
                 <ClickToEdit
                     v-if="props.editable"
-                    class="profile-identity-description"
+                    class="profile-identity-description mt-1 mb-0"
                     component="p"
                     multiline
                     title="Add a short description"
                     :value="props.profile.description || ''"
                     @input="onDescriptionInput" />
-                <p v-else-if="props.profile.description" class="profile-identity-description">
+                <p v-else-if="props.profile.description" class="profile-identity-description mt-1 mb-0">
                     {{ props.profile.description }}
                 </p>
 
                 <hr
                     v-if="props.editable || props.profile.affiliation || orcidLink || links.length > 0"
-                    class="profile-identity-rule" />
+                    class="profile-identity-rule w-100 my-2" />
 
-                <div class="profile-identity-meta">
-                    <div v-if="props.editable || props.profile.affiliation" class="profile-identity-row">
+                <div class="profile-identity-meta d-flex flex-column">
+                    <div
+                        v-if="props.editable || props.profile.affiliation"
+                        class="profile-identity-row d-flex align-items-center">
                         <FontAwesomeIcon :icon="faBuilding" fixed-width />
 
                         <ClickToEdit
@@ -186,8 +198,12 @@ function resetAvatar() {
                         <span v-else>{{ props.profile.affiliation }}</span>
                     </div>
 
-                    <div v-if="props.editable || orcidLink" class="profile-identity-row">
-                        <span class="profile-identity-orcid-badge" aria-hidden="true">iD</span>
+                    <div v-if="props.editable || orcidLink" class="profile-identity-row d-flex align-items-center">
+                        <span
+                            class="profile-identity-orcid-badge d-inline-flex align-items-center justify-content-center rounded-circle font-weight-bold"
+                            aria-hidden="true"
+                            >iD</span
+                        >
 
                         <ClickToEdit
                             v-if="props.editable"
@@ -227,13 +243,13 @@ function resetAvatar() {
 
                 <ClickToEdit
                     v-if="props.editable"
-                    class="profile-identity-interests"
+                    class="profile-identity-interests mt-2 mb-0"
                     component="p"
                     multiline
                     title="Add your research interests"
                     :value="props.profile.research_interests || ''"
                     @input="onInterestsInput" />
-                <p v-else-if="props.profile.research_interests" class="profile-identity-interests">
+                <p v-else-if="props.profile.research_interests" class="profile-identity-interests mt-2 mb-0">
                     {{ props.profile.research_interests }}
                 </p>
             </div>
@@ -243,24 +259,15 @@ function resetAvatar() {
 
 <style scoped lang="scss">
 .profile-identity {
-    display: flex;
-    flex-direction: column;
     gap: 0.5rem;
 
     .profile-identity-avatar {
-        position: relative;
-        align-self: flex-start;
-
         .profile-identity-avatar-actions {
-            position: absolute;
+            // Pins the overlay to the avatar's lower-right corner.
             right: 0.5rem;
             bottom: 0.5rem;
-            display: flex;
-            gap: 0.25rem;
 
             button {
-                border: none;
-                border-radius: 50%;
                 background: rgba(255, 255, 255, 0.9);
                 box-shadow: 0 1px 3px rgba(44, 49, 67, 0.3);
                 padding: 0.4rem;
@@ -271,37 +278,28 @@ function resetAvatar() {
 
     .profile-identity-name {
         font-size: 1.5rem;
-        font-weight: 700;
         color: var(--color-galaxy-dark);
-        margin: 0.5rem 0 0;
-        border-bottom: none;
-        padding-bottom: 0;
     }
 
     .profile-identity-handle {
+        // GitHub-style: the handle sits tight under the display name, closing
+        // most of the column's 0.5rem gap. No Bootstrap negative-margin
+        // utility exists in 4.6, so this stays custom.
+        margin-top: -0.35rem;
         font-size: 1.1rem;
         opacity: 0.75;
     }
 
     .profile-identity-about-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: 0.5rem;
-
         .profile-identity-about-title {
             font-size: 0.8rem;
-            font-weight: 700;
-            text-transform: uppercase;
             letter-spacing: 0.05em;
             opacity: 0.6;
         }
     }
 
     .profile-identity-eye {
-        border: none;
         background: none;
-        padding: 0.25rem;
         color: inherit;
         opacity: 0.6;
 
@@ -312,13 +310,10 @@ function resetAvatar() {
 
     .profile-identity-hidden-note {
         font-size: 0.85rem;
-        font-style: italic;
         opacity: 0.7;
     }
 
     .profile-identity-about {
-        display: flex;
-        flex-direction: column;
         gap: 0.5rem;
 
         &.profile-identity-about-dimmed {
@@ -326,39 +321,25 @@ function resetAvatar() {
         }
     }
 
-    .profile-identity-description {
-        margin: 0.25rem 0 0;
-    }
-
     .profile-identity-rule {
-        width: 100%;
-        margin: 0.5rem 0;
+        // `border-0` is `!important` and would wipe out the rule line below.
         border: 0;
         border-top: 1px solid rgba(37, 83, 123, 0.15);
     }
 
     .profile-identity-meta {
-        display: flex;
-        flex-direction: column;
         gap: 0.4rem;
         font-size: 0.9rem;
 
         .profile-identity-row {
-            display: flex;
-            align-items: center;
             gap: 0.5rem;
         }
 
         .profile-identity-orcid-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
             width: 1.25rem;
             height: 1.25rem;
-            border-radius: 50%;
             border: 1px solid rgba(37, 83, 123, 0.3);
             font-size: 0.6rem;
-            font-weight: 700;
             flex: none;
         }
 
@@ -387,7 +368,6 @@ function resetAvatar() {
 
     .profile-identity-interests {
         font-size: 0.9rem;
-        margin: 0.5rem 0 0;
     }
 }
 </style>

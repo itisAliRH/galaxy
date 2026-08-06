@@ -5,6 +5,8 @@ import { computed, onMounted, ref, watch } from "vue";
 
 import type { components } from "@/api/schema";
 
+import { TOOLS_SECTION_ICON } from "./sections";
+
 import ProfileSection from "./ProfileSection.vue";
 
 type ProfileStarredTool = components["schemas"]["ProfileStarredTool"];
@@ -69,29 +71,30 @@ watch(
         v-if="showCard"
         :count="props.tools.length"
         :editable="props.editable"
+        :icon="TOOLS_SECTION_ICON"
         :search="search"
         :searchable="props.editable && props.tools.length > 0"
         title="Starred tools"
         :visible="props.visible"
         @toggle-visible="emit('toggle-visible', $event)"
         @update:search="search = $event">
-        <div v-if="props.tools.length > 0" class="gx-card profile-tools">
+        <div v-if="props.tools.length > 0" class="gx-card profile-tools d-flex flex-column">
             <router-link
                 v-for="tool in displayedTools"
                 :key="tool.id"
-                class="gx-row-accent profile-tools-item"
+                class="gx-row-accent profile-tools-item d-flex align-items-center"
                 :to="toolUrl(tool)">
                 <FontAwesomeIcon class="profile-tools-icon" :icon="faWrench" fixed-width />
 
                 <span class="profile-tools-name">{{ tool.name }}</span>
             </router-link>
 
-            <div v-if="displayedTools.length === 0" v-localize class="profile-tools-empty">
+            <div v-if="displayedTools.length === 0" v-localize class="profile-tools-empty font-italic">
                 No tools match the search.
             </div>
         </div>
 
-        <div v-else-if="props.editable" v-localize class="profile-tools-empty">
+        <div v-else-if="props.editable" v-localize class="profile-tools-empty font-italic">
             No starred tools yet. Tools you star in the tool panel show up here.
         </div>
     </ProfileSection>
@@ -99,13 +102,9 @@ watch(
 
 <style scoped lang="scss">
 .profile-tools {
-    display: flex;
-    flex-direction: column;
     gap: 0.5rem;
 
     .profile-tools-item {
-        display: flex;
-        align-items: center;
         gap: 0.5rem;
         padding: 0.5rem 0.75rem 0.5rem 0.9rem;
         border: 1px solid rgba(37, 83, 123, 0.12);
@@ -132,7 +131,6 @@ watch(
 
 .profile-tools-empty {
     font-size: 0.9rem;
-    font-style: italic;
     opacity: 0.7;
 }
 </style>

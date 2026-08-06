@@ -138,9 +138,12 @@ function removeLink(index: number) {
 </script>
 
 <template>
-    <div v-if="props.links.length > 0 || props.editable" class="profile-links">
+    <div v-if="props.links.length > 0 || props.editable" class="profile-links d-flex flex-column">
         <template v-for="(link, index) in props.links">
-            <div v-if="editingIndex !== index" :key="`link-${index}`" class="profile-links-row">
+            <div
+                v-if="editingIndex !== index"
+                :key="`link-${index}`"
+                class="profile-links-row d-flex align-items-center">
                 <FontAwesomeIcon :icon="linkIcon(link)" fixed-width />
 
                 <a class="profile-links-anchor" :href="link.url" rel="noopener noreferrer" target="_blank">
@@ -148,45 +151,57 @@ function removeLink(index: number) {
                     <FontAwesomeIcon class="profile-links-external" :icon="faExternalLinkAlt" size="xs" />
                 </a>
 
-                <span v-if="props.editable" class="profile-links-actions">
-                    <button type="button" title="Edit link" aria-label="Edit link" @click="startEdit(index)">
+                <span v-if="props.editable" class="profile-links-actions d-inline-flex flex-gapx-1">
+                    <button
+                        class="border-0"
+                        type="button"
+                        title="Edit link"
+                        aria-label="Edit link"
+                        @click="startEdit(index)">
                         <FontAwesomeIcon :icon="faPencilAlt" fixed-width />
                     </button>
 
-                    <button type="button" title="Remove link" aria-label="Remove link" @click="removeLink(index)">
+                    <button
+                        class="border-0"
+                        type="button"
+                        title="Remove link"
+                        aria-label="Remove link"
+                        @click="removeLink(index)">
                         <FontAwesomeIcon :icon="faTrash" fixed-width />
                     </button>
                 </span>
             </div>
 
-            <div v-else :key="`link-edit-${index}`" class="profile-links-editor">
+            <div v-else :key="`link-edit-${index}`" class="profile-links-editor d-flex flex-column align-items-stretch">
                 <BFormInput v-model="draftUrl" placeholder="https://…" size="sm" type="url" @keyup.enter="commitEdit" />
 
                 <BFormInput v-model="draftLabel" placeholder="Label (optional)" size="sm" @keyup.enter="commitEdit" />
 
-                <span class="profile-links-editor-actions">
-                    <button type="button" title="Save link" aria-label="Save link" @click="commitEdit">
+                <span class="profile-links-editor-actions d-inline-flex justify-content-end flex-gapx-1">
+                    <button class="border-0" type="button" title="Save link" aria-label="Save link" @click="commitEdit">
                         <FontAwesomeIcon :icon="faCheck" fixed-width />
                     </button>
 
-                    <button type="button" title="Cancel" aria-label="Cancel" @click="cancelEdit">
+                    <button class="border-0" type="button" title="Cancel" aria-label="Cancel" @click="cancelEdit">
                         <FontAwesomeIcon :icon="faTimes" fixed-width />
                     </button>
                 </span>
             </div>
         </template>
 
-        <div v-if="editingIndex === props.links.length" class="profile-links-editor">
+        <div
+            v-if="editingIndex === props.links.length"
+            class="profile-links-editor d-flex flex-column align-items-stretch">
             <BFormInput v-model="draftUrl" placeholder="https://…" size="sm" type="url" @keyup.enter="commitEdit" />
 
             <BFormInput v-model="draftLabel" placeholder="Label (optional)" size="sm" @keyup.enter="commitEdit" />
 
-            <span class="profile-links-editor-actions">
-                <button type="button" title="Save link" aria-label="Save link" @click="commitEdit">
+            <span class="profile-links-editor-actions d-inline-flex justify-content-end flex-gapx-1">
+                <button class="border-0" type="button" title="Save link" aria-label="Save link" @click="commitEdit">
                     <FontAwesomeIcon :icon="faCheck" fixed-width />
                 </button>
 
-                <button type="button" title="Cancel" aria-label="Cancel" @click="cancelEdit">
+                <button class="border-0" type="button" title="Cancel" aria-label="Cancel" @click="cancelEdit">
                     <FontAwesomeIcon :icon="faTimes" fixed-width />
                 </button>
             </span>
@@ -209,13 +224,9 @@ function removeLink(index: number) {
 
 <style scoped lang="scss">
 .profile-links {
-    display: flex;
-    flex-direction: column;
     gap: 0.4rem;
 
     .profile-links-row {
-        display: flex;
-        align-items: center;
         gap: 0.5rem;
 
         .profile-links-anchor {
@@ -230,22 +241,12 @@ function removeLink(index: number) {
 
     // The URL and label inputs stack so each gets a readable width.
     .profile-links-editor {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
         gap: 0.35rem;
-    }
-
-    .profile-links-editor-actions {
-        display: inline-flex;
-        justify-content: flex-end;
-        gap: 0.25rem;
     }
 
     .profile-links-actions,
     .profile-links-editor-actions {
         button {
-            border: none;
             background: none;
             padding: 0.15rem 0.25rem;
             color: inherit;
@@ -256,11 +257,6 @@ function removeLink(index: number) {
                 opacity: 1;
             }
         }
-    }
-
-    .profile-links-actions {
-        display: inline-flex;
-        gap: 0.25rem;
     }
 
     .profile-links-row .profile-links-actions {
