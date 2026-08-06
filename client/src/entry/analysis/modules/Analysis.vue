@@ -43,7 +43,8 @@ const isNoPaddingPath = computed(() => {
     return (
         route.path.startsWith("/galaxyai") ||
         (route.path.startsWith("/histories/") && route.path.includes("/pages/")) ||
-        route.path.startsWith("/pages/editor")
+        route.path.startsWith("/pages/editor") ||
+        route.path.startsWith("/profile/")
     );
 });
 

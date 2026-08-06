@@ -223,12 +223,6 @@ export function getRouter(Galaxy) {
                     initialY: route.query.initialY ? parseInt(route.query.initialY) : undefined,
                 }),
             },
-            /** Public user profile pages */
-            {
-                path: "/profile/:username",
-                component: UserProfilePage,
-                props: (route) => ({ username: route.params.username }),
-            },
             {
                 name: "error",
                 path: "/client-error/",
@@ -752,10 +746,18 @@ export function getRouter(Galaxy) {
                             userId: Galaxy.user.id,
                         },
                     },
+                    /** Public user profile pages; rendered with the standard
+                     *  activity bar and history panel chrome. */
+                    {
+                        path: "profile/:username",
+                        component: UserProfilePage,
+                        redirect: redirectIf(!Galaxy.config.enable_user_profile_pages, "/"),
+                        props: (route) => ({ username: route.params.username }),
+                    },
                     {
                         path: "user/profile-settings",
                         component: ProfileSettings,
-                        redirect: redirectAnon(),
+                        redirect: redirectIf(!Galaxy.config.enable_user_profile_pages, "/") || redirectAnon(),
                     },
                     {
                         path: "user/:formId",
