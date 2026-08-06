@@ -1,17 +1,26 @@
+import json
+from types import SimpleNamespace
+
 import pytest
 from pydantic import ValidationError
 
+from galaxy.exceptions import RequestParameterInvalidException
 from galaxy.managers.user_profile import UserProfileManager
 from galaxy.schema.schema import (
     _validate_orcid,
-    USER_PROFILE_MAX_SECTION_ITEM_IDS,
-    USER_PROFILE_MAX_SECTION_ITEMS,
     USER_PROFILE_MAX_VISIBLE_SECTIONS,
     UserProfileUpdatePayload,
 )
 from .base import BaseTestCase
 
 VALID_ORCID = "0000-0002-1825-0097"
+
+LIMITS_CONFIG = SimpleNamespace(
+    user_profile_max_links=10,
+    user_profile_max_section_items=20,
+    user_profile_max_section_item_ids=100,
+    user_profile_max_starred_tools=50,
+)
 
 
 class TestUserProfileManager(BaseTestCase):
@@ -83,6 +92,47 @@ class TestUserProfileManager(BaseTestCase):
         assert self.profile_manager.get_public_by_username("no-such-user") is None
         assert self.profile_manager.get_public_by_username("") is None
 
+    def test_starred_tools_resolution(self):
+        user = self._user(email="tools-user@example.com", username="tools-user")
+        user.preferences["favorites"] = json.dumps({"tools": ["cat1", "gone-tool"]})
+
+        class _Tool:
+            id = "cat1"
+            name = "Concatenate datasets"
+
+        class _Toolbox:
+            def get_tool(self, tool_id):
+                return _Tool() if tool_id == "cat1" else None
+
+        starred = self.profile_manager.get_starred_tools(user, _Toolbox(), limit=50)
+        assert [(tool.id, tool.name) for tool in starred] == [("cat1", "Concatenate datasets")]
+
+    def test_public_layout_hides_hidden_sections(self):
+        user = self._user(email="scrub-user@example.com", username="scrub-user")
+        self.profile_manager.upsert(
+            user,
+            UserProfileUpdatePayload.model_validate(
+                {
+                    "published": True,
+                    "visible_sections": {"workflows": False},
+                    "layout": {
+                        "section_order": ["workflows", "histories"],
+                        "sections": {"workflows": {"pinned": ["abc"]}, "histories": {"limit": 3}},
+                    },
+                }
+            ),
+        )
+        profile = self.profile_manager.get_public_by_username("scrub-user")
+        assert profile is not None
+        public = self.profile_manager.to_public(profile)
+        assert public.layout is not None
+        assert public.layout.section_order == ["histories"]
+        assert public.layout.sections is not None
+        assert "workflows" not in public.layout.sections
+        assert public.layout.sections["histories"].limit == 3
+        # the hidden flag itself stays visible so clients keep defaulting unknown keys to visible
+        assert public.visible_sections == {"workflows": False}
+
     def test_layout_roundtrip(self):
         user = self._user(email="layout-user@example.com", username="layout-user")
         layout = {
@@ -125,16 +175,9 @@ class TestUserProfilePayloadValidation:
         ok = UserProfileUpdatePayload.model_validate({"visible_sections": {"histories": False}})
         assert ok.visible_sections == {"histories": False}
 
-    def test_layout_bounds(self):
+    def test_layout_static_bounds(self):
         with pytest.raises(ValidationError):
             UserProfileUpdatePayload.model_validate({"layout": {"sections": {"histories": {"limit": 0}}}})
-        with pytest.raises(ValidationError):
-            UserProfileUpdatePayload.model_validate(
-                {"layout": {"sections": {"histories": {"limit": USER_PROFILE_MAX_SECTION_ITEMS + 1}}}}
-            )
-        too_many_ids = [f"id-{i}" for i in range(USER_PROFILE_MAX_SECTION_ITEM_IDS + 1)]
-        with pytest.raises(ValidationError):
-            UserProfileUpdatePayload.model_validate({"layout": {"sections": {"histories": {"pinned": too_many_ids}}}})
         with pytest.raises(ValidationError):
             UserProfileUpdatePayload.model_validate({"layout": {"section_order": ["k" * 65]}})
         ok = UserProfileUpdatePayload.model_validate(
@@ -143,6 +186,31 @@ class TestUserProfilePayloadValidation:
         assert ok.layout is not None
         assert ok.layout.sections is not None
         assert ok.layout.sections["histories"].limit == 5
+
+
+class TestConfigurableLimits:
+    def _manager(self):
+        return UserProfileManager(session=None)  # type: ignore[arg-type]
+
+    def test_section_limit_capped_by_config(self):
+        payload = UserProfileUpdatePayload.model_validate({"layout": {"sections": {"histories": {"limit": 21}}}})
+        with pytest.raises(RequestParameterInvalidException):
+            self._manager().enforce_limits(payload, LIMITS_CONFIG)
+        ok = UserProfileUpdatePayload.model_validate({"layout": {"sections": {"histories": {"limit": 20}}}})
+        self._manager().enforce_limits(ok, LIMITS_CONFIG)
+
+    def test_item_ids_capped_by_config(self):
+        too_many = [f"id-{i}" for i in range(101)]
+        payload = UserProfileUpdatePayload.model_validate({"layout": {"sections": {"histories": {"pinned": too_many}}}})
+        with pytest.raises(RequestParameterInvalidException):
+            self._manager().enforce_limits(payload, LIMITS_CONFIG)
+
+    def test_links_capped_by_config(self):
+        links = [{"label": f"link {i}", "url": "https://example.org"} for i in range(11)]
+        payload = UserProfileUpdatePayload.model_validate({"links": links})
+        with pytest.raises(RequestParameterInvalidException):
+            self._manager().enforce_limits(payload, LIMITS_CONFIG)
+        self._manager().enforce_limits(UserProfileUpdatePayload.model_validate({"links": links[:10]}), LIMITS_CONFIG)
 
 
 class TestOrcidValidation:

@@ -458,7 +458,10 @@ class FastAPIUsers:
         self._ensure_profile_pages_enabled(trans)
         user = self.service.get_user(trans, user_id)
         profile = self.profile_manager.get_for_user(user)
-        return self.profile_manager.to_detail(user, profile)
+        starred_tools = self.profile_manager.get_starred_tools(
+            user, trans.app.toolbox, trans.app.config.user_profile_max_starred_tools
+        )
+        return self.profile_manager.to_detail(user, profile, starred_tools=starred_tools)
 
     @router.put(
         "/api/users/{user_id}/profile",
@@ -473,8 +476,12 @@ class FastAPIUsers:
     ) -> UserProfileDetail:
         self._ensure_profile_pages_enabled(trans)
         user = self.service.get_user(trans, user_id)
+        self.profile_manager.enforce_limits(payload, trans.app.config)
         profile = self.profile_manager.upsert(user, payload)
-        return self.profile_manager.to_detail(user, profile)
+        starred_tools = self.profile_manager.get_starred_tools(
+            user, trans.app.toolbox, trans.app.config.user_profile_max_starred_tools
+        )
+        return self.profile_manager.to_detail(user, profile, starred_tools=starred_tools)
 
     @router.put(
         "/api/users/{user_id}/theme/{theme}",

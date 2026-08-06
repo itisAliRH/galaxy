@@ -58,4 +58,11 @@ class FastAPIProfiles:
         profile = self.profile_manager.get_public_by_username(username)
         if profile is None:
             raise ObjectNotFound(PROFILE_NOT_FOUND_MESSAGE)
-        return self.profile_manager.to_public(profile)
+        # Starred tools are derived data; keep them out of the payload when
+        # the owner has hidden the tools section.
+        starred_tools = None
+        if (profile.visible_sections or {}).get("tools", True):
+            starred_tools = self.profile_manager.get_starred_tools(
+                profile.user, trans.app.toolbox, config.user_profile_max_starred_tools
+            )
+        return self.profile_manager.to_public(profile, starred_tools=starred_tools)

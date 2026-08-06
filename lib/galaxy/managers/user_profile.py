@@ -1,7 +1,7 @@
 """Manager for public user profile pages (the ``user_profile`` table).
 
 Owns reading and upserting a user's profile row plus the public-by-username
-lookup used by the anonymous ``/api/people/{username}`` endpoint. The public
+lookup used by the anonymous ``/api/profiles/{username}`` endpoint. The public
 lookup returns ``None`` for every failure mode (unknown username, inactive or
 deleted user, missing or unpublished profile) so callers can produce a single,
 indistinguishable 404 and not leak which usernames exist.
@@ -15,12 +15,15 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from galaxy.exceptions import RequestParameterInvalidException
+from galaxy.managers.favorites import FavoritesManager
 from galaxy.model import (
     User,
     UserProfile,
 )
 from galaxy.model.scoped_session import galaxy_scoped_session
 from galaxy.schema.schema import (
+    ProfileStarredTool,
     PublicUserProfile,
     UserProfileDetail,
     UserProfileUpdatePayload,
@@ -39,10 +42,12 @@ class UserProfileManager:
         """Return the user's profile row, or None if never created."""
         return self.session.execute(select(UserProfile).where(UserProfile.user_id == user.id)).scalar_one_or_none()
 
-    def to_detail(self, user: User, profile: UserProfile | None) -> UserProfileDetail:
+    def to_detail(
+        self, user: User, profile: UserProfile | None, starred_tools: list[ProfileStarredTool] | None = None
+    ) -> UserProfileDetail:
         """Serialize the owner's view; a missing row serializes as an empty, unpublished profile."""
         if profile is None:
-            return UserProfileDetail(username=user.username)
+            return UserProfileDetail(username=user.username, starred_tools=starred_tools)
         return UserProfileDetail(
             published=profile.published,
             username=user.username,
@@ -55,7 +60,47 @@ class UserProfileManager:
             links=profile.links,
             visible_sections=profile.visible_sections,
             layout=profile.layout,
+            starred_tools=starred_tools,
         )
+
+    def get_starred_tools(self, user: User, toolbox, limit: int) -> list[ProfileStarredTool]:
+        """Resolve the user's favorite tools to (id, name) pairs, skipping uninstalled tools."""
+        favorites = FavoritesManager().get(user)
+        starred: list[ProfileStarredTool] = []
+        for tool_id in favorites.get("tools", [])[:limit]:
+            tool = toolbox.get_tool(tool_id)
+            if tool and tool.id:
+                starred.append(ProfileStarredTool(id=tool.id, name=tool.name))
+        return starred
+
+    def enforce_limits(self, payload: UserProfileUpdatePayload, config) -> None:
+        """Enforce the instance-configurable size limits (user_profile_max_*).
+
+        Static shape constraints live on the Pydantic models; anything an
+        admin can tune in the configuration file is validated here instead so
+        the limits stay consistent across the app.
+        """
+        changes = payload.model_dump(exclude_unset=True)
+        links = changes.get("links")
+        if links and len(links) > config.user_profile_max_links:
+            raise RequestParameterInvalidException(
+                f"A profile can hold at most {config.user_profile_max_links} links."
+            )
+        layout = changes.get("layout") or {}
+        for section in (layout.get("sections") or {}).values():
+            if not section:
+                continue
+            limit = section.get("limit")
+            if limit is not None and limit > config.user_profile_max_section_items:
+                raise RequestParameterInvalidException(
+                    f"A section can show at most {config.user_profile_max_section_items} items."
+                )
+            for field in ("pinned", "item_order"):
+                item_ids = section.get(field)
+                if item_ids and len(item_ids) > config.user_profile_max_section_item_ids:
+                    raise RequestParameterInvalidException(
+                        f"A section can track at most {config.user_profile_max_section_item_ids} item ids."
+                    )
 
     def upsert(self, user: User, payload: UserProfileUpdatePayload, commit: bool = True) -> UserProfile:
         """Apply the payload to the user's profile, creating the row on first write.
@@ -108,7 +153,9 @@ class UserProfileManager:
         )
         return self.session.execute(stmt).scalar_one_or_none()
 
-    def to_public(self, profile: UserProfile) -> PublicUserProfile:
+    def to_public(
+        self, profile: UserProfile, starred_tools: list[ProfileStarredTool] | None = None
+    ) -> PublicUserProfile:
         """Serialize the public view. Never include email or internal ids."""
         return PublicUserProfile(
             username=profile.user.username,
@@ -120,5 +167,28 @@ class UserProfileManager:
             avatar_seed=profile.avatar_seed,
             links=profile.links,
             visible_sections=profile.visible_sections,
-            layout=profile.layout,
+            layout=self._public_layout(profile),
+            starred_tools=starred_tools,
         )
+
+    @staticmethod
+    def _public_layout(profile: UserProfile) -> dict | None:
+        """Strip hidden sections' item ids and settings from the public payload.
+
+        The false flags themselves stay in ``visible_sections`` so clients
+        keep treating unknown keys as visible.
+        """
+        layout = profile.layout
+        if not layout:
+            return layout
+        visible = profile.visible_sections or {}
+
+        def hidden(key: str) -> bool:
+            return visible.get(key) is False
+
+        scrubbed = dict(layout)
+        if layout.get("sections"):
+            scrubbed["sections"] = {key: value for key, value in layout["sections"].items() if not hidden(key)}
+        if layout.get("section_order"):
+            scrubbed["section_order"] = [key for key in layout["section_order"] if not hidden(key)]
+        return scrubbed

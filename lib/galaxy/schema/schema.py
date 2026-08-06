@@ -497,12 +497,12 @@ class FavoriteObjectsSummary(Model):
     )
 
 
-USER_PROFILE_MAX_LINKS = 10
+# Wire-format bounds. The user-facing limits (max links, max items a section
+# shows, max tracked item ids, max starred tools) are instance-configurable
+# (user_profile_max_*) and enforced in UserProfileManager.enforce_limits.
 USER_PROFILE_MAX_VISIBLE_SECTIONS = 20
 USER_PROFILE_MAX_SECTION_KEY_LENGTH = 64
 USER_PROFILE_MIN_SECTION_ITEMS = 1
-USER_PROFILE_MAX_SECTION_ITEMS = 20
-USER_PROFILE_MAX_SECTION_ITEM_IDS = 100
 _ORCID_PATTERN = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")
 
 ProfileSectionKey = Annotated[str, StringConstraints(max_length=USER_PROFILE_MAX_SECTION_KEY_LENGTH)]
@@ -548,19 +548,16 @@ class UserProfileSectionLayout(Model):
         title="Item limit",
         description="How many items the section shows; the client default applies when unset.",
         ge=USER_PROFILE_MIN_SECTION_ITEMS,
-        le=USER_PROFILE_MAX_SECTION_ITEMS,
     )
     pinned: list[ProfileItemId] | None = Field(
         default=None,
         title="Pinned items",
         description="Encoded ids of items pinned to the top of the section, in display order.",
-        max_length=USER_PROFILE_MAX_SECTION_ITEM_IDS,
     )
     item_order: list[ProfileItemId] | None = Field(
         default=None,
         title="Item order",
         description="Manual ordering of encoded item ids; unlisted items follow, newest first.",
-        max_length=USER_PROFILE_MAX_SECTION_ITEM_IDS,
     )
 
 
@@ -619,7 +616,6 @@ class UserProfileBase(Model):
         default=None,
         title="Links",
         description="External links shown on the profile page.",
-        max_length=USER_PROFILE_MAX_LINKS,
     )
     visible_sections: dict[ProfileSectionKey, bool] | None = Field(
         default=None,
@@ -631,6 +627,21 @@ class UserProfileBase(Model):
         default=None,
         title="Layout",
         description="Section ordering and per-section display settings for the profile page.",
+    )
+
+
+class ProfileStarredTool(Model):
+    """A starred tool shown on the profile page; derived from the user's favorites, never stored on the profile row."""
+
+    id: str = Field(
+        default=...,
+        title="Tool id",
+        description="Canonical id of the starred tool.",
+    )
+    name: str = Field(
+        default=...,
+        title="Tool name",
+        description="Display name of the starred tool.",
     )
 
 
@@ -658,6 +669,11 @@ class UserProfileDetail(UserProfileBase):
         title="Username",
         description="The owner's public name; determines the profile page URL.",
     )
+    starred_tools: list[ProfileStarredTool] | None = Field(
+        default=None,
+        title="Starred tools",
+        description="The owner's starred tools; read-only, derived from the user's favorites.",
+    )
 
 
 class PublicUserProfile(UserProfileBase):
@@ -671,6 +687,11 @@ class PublicUserProfile(UserProfileBase):
         default=...,
         title="Username",
         description="The owner's public name.",
+    )
+    starred_tools: list[ProfileStarredTool] | None = Field(
+        default=None,
+        title="Starred tools",
+        description="The owner's starred tools; only present when the tools section is visible.",
     )
 
 
