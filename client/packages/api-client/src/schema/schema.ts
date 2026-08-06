@@ -21204,6 +21204,22 @@ export interface components {
             model_store_format: components["schemas"]["ModelStoreFormat"];
         };
         /**
+         * ProfileStarredTool
+         * @description A starred tool shown on the profile page; derived from the user's favorites, never stored on the profile row.
+         */
+        ProfileStarredTool: {
+            /**
+             * Tool id
+             * @description Canonical id of the starred tool.
+             */
+            id: string;
+            /**
+             * Tool name
+             * @description Display name of the starred tool.
+             */
+            name: string;
+        };
+        /**
          * PublicUserProfile
          * @description Public view of a user profile.
          *
@@ -21251,6 +21267,11 @@ export interface components {
              * @description Longer-form description of research interests.
              */
             research_interests?: string | null;
+            /**
+             * Starred tools
+             * @description The owner's starred tools; only present when the tools section is visible.
+             */
+            starred_tools?: components["schemas"]["ProfileStarredTool"][] | null;
             /**
              * Username
              * @description The owner's public name.
@@ -26325,6 +26346,11 @@ export interface components {
              * @description Longer-form description of research interests.
              */
             research_interests?: string | null;
+            /**
+             * Starred tools
+             * @description The owner's starred tools; read-only, derived from the user's favorites.
+             */
+            starred_tools?: components["schemas"]["ProfileStarredTool"][] | null;
             /**
              * Username
              * @description The owner's public name; determines the profile page URL.
