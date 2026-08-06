@@ -34,7 +34,18 @@ export interface ProfileListItem {
     id: string;
     name: string;
     updateTime?: string;
+    /**
+     * Short description, when the item type carries one. Histories and
+     * visualizations annotate per viewing user, so a visitor sees nothing
+     * there for someone else's item; workflow annotations resolve for
+     * everyone. The pages index returns no annotation at all.
+     */
+    description?: string;
+    tags?: string[];
 }
+
+/** How many tags a row shows before the rest are dropped. */
+export const MAX_VISIBLE_TAGS = 3;
 
 export interface ProfileSectionDefinition {
     key: string;
@@ -63,7 +74,13 @@ async function fetchHistories(username: string) {
         sortDesc: true,
     });
     return {
-        items: data.map((history) => ({ id: history.id, name: history.name, updateTime: history.update_time })),
+        items: data.map((history) => ({
+            id: history.id,
+            name: history.name,
+            updateTime: history.update_time,
+            description: history.annotation ?? undefined,
+            tags: history.tags,
+        })),
         total,
     };
 }
@@ -79,7 +96,13 @@ async function fetchWorkflows(username: string) {
         skipStepCounts: true,
     });
     return {
-        items: data.map((workflow) => ({ id: workflow.id, name: workflow.name, updateTime: workflow.update_time })),
+        items: data.map((workflow) => ({
+            id: workflow.id,
+            name: workflow.name,
+            updateTime: workflow.update_time,
+            description: workflow.annotations?.[0] ?? undefined,
+            tags: workflow.tags as string[] | undefined,
+        })),
         total: totalMatches,
     };
 }
@@ -103,7 +126,12 @@ async function fetchPages(username: string) {
         rethrowSimple(error);
     }
     return {
-        items: data.map((page) => ({ id: page.id, name: page.title, updateTime: page.update_time })),
+        items: data.map((page) => ({
+            id: page.id,
+            name: page.title,
+            updateTime: page.update_time,
+            tags: page.tags as string[] | undefined,
+        })),
         total: parseInt(response.headers.get("total_matches") ?? "0"),
     };
 }
@@ -131,6 +159,8 @@ async function fetchVisualizations(username: string) {
             id: visualization.id,
             name: visualization.title,
             updateTime: visualization.update_time ?? undefined,
+            description: (visualization.annotation as string | null | undefined) ?? undefined,
+            tags: visualization.tags as string[] | undefined,
         })),
         total: parseInt(response.headers.get("total_matches") ?? "0"),
     };

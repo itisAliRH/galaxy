@@ -6,9 +6,15 @@ import draggable from "vuedraggable";
 
 import type { components } from "@/api/schema";
 
-import { DEFAULT_SECTION_ITEMS, type ProfileListItem, type ProfileSectionDefinition } from "./sections";
+import {
+    DEFAULT_SECTION_ITEMS,
+    MAX_VISIBLE_TAGS,
+    type ProfileListItem,
+    type ProfileSectionDefinition,
+} from "./sections";
 
 import ProfileSection from "./ProfileSection.vue";
+import GButton from "@/components/BaseComponents/GButton.vue";
 import UtcDate from "@/components/UtcDate.vue";
 
 type SectionLayout = components["schemas"]["UserProfileSectionLayout"];
@@ -134,6 +140,10 @@ function emitLayout(changes: SectionLayout) {
     });
 }
 
+function visibleTags(item: ProfileListItem) {
+    return (item.tags ?? []).slice(0, MAX_VISIBLE_TAGS);
+}
+
 function isPinned(item: ProfileListItem) {
     return pinnedSet.value.has(item.id);
 }
@@ -206,7 +216,7 @@ onMounted(load);
                 <div
                     v-for="item in displayedItems"
                     :key="item.id"
-                    class="gx-row-accent profile-list-item d-flex align-items-center"
+                    class="gx-row-accent profile-list-item d-flex align-items-start"
                     :class="{ 'profile-list-item-pinned': isPinned(item) }">
                     <span
                         v-if="props.editable"
@@ -221,6 +231,12 @@ onMounted(load);
                         :to="props.definition.itemUrl(item)">
                         <span class="profile-list-name font-weight-bold">{{ item.name }}</span>
 
+                        <span v-if="item.description" class="profile-list-description">{{ item.description }}</span>
+
+                        <span v-if="item.tags && item.tags.length > 0" class="profile-list-tags d-flex flex-wrap">
+                            <span v-for="tag in visibleTags(item)" :key="tag" class="gx-tag">{{ tag }}</span>
+                        </span>
+
                         <span v-if="item.updateTime" class="profile-list-meta">
                             updated <UtcDate :date="item.updateTime" mode="elapsed" />
                         </span>
@@ -232,17 +248,19 @@ onMounted(load);
                         :icon="faThumbtack"
                         title="Pinned" />
 
-                    <button
+                    <GButton
                         v-if="props.editable"
-                        class="profile-list-pin border-0 p-1"
+                        class="profile-list-pin"
                         :class="{ 'profile-list-pin-active': isPinned(item) }"
-                        type="button"
+                        color="grey"
+                        size="small"
+                        transparent
                         :disabled="!props.visible"
+                        :pressed="isPinned(item)"
                         :title="isPinned(item) ? 'Unpin from the top' : 'Pin to the top'"
-                        :aria-label="isPinned(item) ? 'Unpin from the top' : 'Pin to the top'"
                         @click="togglePin(item)">
                         <FontAwesomeIcon :icon="faThumbtack" fixed-width />
-                    </button>
+                    </GButton>
                 </div>
             </draggable>
 
@@ -307,6 +325,7 @@ onMounted(load);
         overflow-wrap: anywhere;
         gap: 0.15rem;
         text-decoration: none;
+        cursor: pointer;
 
         &:hover {
             text-decoration: none;
@@ -314,6 +333,21 @@ onMounted(load);
 
         .profile-list-name {
             color: var(--color-galaxy-dark);
+        }
+
+        .profile-list-description {
+            font-size: 0.85rem;
+            color: var(--color-galaxy-grey);
+            // keep rows scannable: long descriptions stop after two lines
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .profile-list-tags {
+            gap: 0.25rem;
+            margin-top: 0.15rem;
         }
 
         .profile-list-meta {
