@@ -83,9 +83,7 @@ class UserProfileManager:
         changes = payload.model_dump(exclude_unset=True)
         links = changes.get("links")
         if links and len(links) > config.user_profile_max_links:
-            raise RequestParameterInvalidException(
-                f"A profile can hold at most {config.user_profile_max_links} links."
-            )
+            raise RequestParameterInvalidException(f"A profile can hold at most {config.user_profile_max_links} links.")
         layout = changes.get("layout") or {}
         for section in (layout.get("sections") or {}).values():
             if not section:
