@@ -51,6 +51,55 @@ class TestUserProfilePagesEnabledIntegration(integration_util.IntegrationTestCas
         assert profile["published"] is True
         assert profile["display_name"] == "Integration Alice"
 
+    def test_starred_tools_reported(self):
+        user_id = self._current_user_id()
+        response = self.galaxy_interactor.put(f"users/{user_id}/favorites/tools", data={"object_id": "cat1"}, json=True)
+        self._assert_status_code_is(response, 200)
+
+        response = self.galaxy_interactor.get(f"users/{user_id}/profile")
+        self._assert_status_code_is(response, 200)
+        starred = response.json()["starred_tools"]
+        assert [tool["id"] for tool in starred] == ["cat1"]
+        assert starred[0]["name"]
+
+    def test_configurable_limits_enforced(self):
+        user_id = self._current_user_id()
+        # the default user_profile_max_links is 10
+        too_many_links = [{"label": f"link {i}", "url": "https://example.org"} for i in range(11)]
+        response = self.galaxy_interactor.put(f"users/{user_id}/profile", data={"links": too_many_links}, json=True)
+        self._assert_status_code_is(response, 400)
+
+        # the default user_profile_max_section_items is 20
+        response = self.galaxy_interactor.put(
+            f"users/{user_id}/profile",
+            data={"layout": {"sections": {"histories": {"limit": 21}}}},
+            json=True,
+        )
+        self._assert_status_code_is(response, 400)
+
+    def test_hidden_section_layout_not_public(self):
+        user_id = self._current_user_id()
+        username = self._current_username()
+        payload = {
+            "published": True,
+            "visible_sections": {"workflows": False},
+            "layout": {
+                "section_order": ["workflows", "histories"],
+                "sections": {"workflows": {"pinned": ["abc"]}, "histories": {"limit": 3}},
+            },
+        }
+        response = self.galaxy_interactor.put(f"users/{user_id}/profile", data=payload, json=True)
+        self._assert_status_code_is(response, 200)
+
+        response = self.galaxy_interactor.get(f"profiles/{username}", anon=True)
+        self._assert_status_code_is(response, 200)
+        public = response.json()
+        assert public["layout"]["section_order"] == ["histories"]
+        assert "workflows" not in public["layout"]["sections"]
+        assert public["layout"]["sections"]["histories"]["limit"] == 3
+        # the flag itself stays so clients keep defaulting unknown keys to visible
+        assert public["visible_sections"]["workflows"] is False
+
     def test_invalid_orcid_rejected(self):
         user_id = self._current_user_id()
         response = self.galaxy_interactor.put(
