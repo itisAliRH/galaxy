@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { faArrowLeft, faCheck, faCog, faEye, faPencilAlt, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faArrowLeft, faCheck, faCog, faEye, faPencilAlt, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { storeToRefs } from "pinia";
 import { computed, onMounted, ref, set, watch } from "vue";
@@ -85,7 +85,6 @@ const editing = computed(() => ownerMode.value && !publicPreview.value);
 const editingIdentity = computed(() => editing.value && identityEditRequested.value);
 /** The identity card renders the buffered edits while they are unsaved. */
 const identityProfile = computed(() => (profile.value ? { ...profile.value, ...identityDraft.value } : null));
-const identityDirty = computed(() => Object.keys(identityDraft.value).length > 0);
 /** Visitor rules apply to real visitors and to the owner's public preview. */
 const asVisitor = computed(() => !ownerMode.value || publicPreview.value);
 
@@ -405,7 +404,6 @@ watch([isOwner, userId], ([owner, id]) => {
                                         class="flex-fill"
                                         color="blue"
                                         size="small"
-                                        :disabled="!identityDirty"
                                         @click="saveIdentity">
                                         <FontAwesomeIcon :icon="faCheck" />
                                         <span v-localize>Save</span>
@@ -416,8 +414,8 @@ watch([isOwner, userId], ([owner, id]) => {
                                         class="flex-fill"
                                         color="grey"
                                         size="small"
-                                        outline
                                         @click="cancelIdentity">
+                                        <FontAwesomeIcon :icon="faTimes" />
                                         <span v-localize>Cancel</span>
                                     </GButton>
                                 </div>

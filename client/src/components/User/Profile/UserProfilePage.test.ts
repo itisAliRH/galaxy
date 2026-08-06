@@ -188,18 +188,26 @@ describe("UserProfilePage.vue", () => {
         expect(wrapper.find("#profile-edit").exists()).toBe(true);
     });
 
-    it("keeps save disabled until an identity field changes", async () => {
+    it("sends nothing when save is pressed without an identity change", async () => {
         mockEmptySections();
+        let putCount = 0;
         server.use(
             http.get("/api/users/{user_id}/profile", ({ response }) =>
                 response(200).json(publicProfile({ published: true }) as never),
             ),
+            http.put("/api/users/{user_id}/profile", ({ response }) => {
+                putCount += 1;
+                return response(200).json(publicProfile({ published: true }) as never);
+            }),
         );
         const wrapper = await mountPage(TEST_USERNAME, TEST_USERNAME);
 
         await wrapper.find("#profile-edit").trigger("click");
+        await wrapper.find("#profile-edit-save").trigger("click");
+        await flushPromises();
 
-        expect(wrapper.find("#profile-edit-save").attributes("aria-disabled")).toBe("true");
+        expect(putCount).toBe(0);
+        expect(wrapper.find("#profile-edit").exists()).toBe(true);
     });
 
     it("hides editing affordances in the owner's public preview", async () => {
