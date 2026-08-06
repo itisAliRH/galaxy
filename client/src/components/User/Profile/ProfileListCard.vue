@@ -304,8 +304,9 @@ onMounted(load);
     }
 
     .profile-list-link {
-        flex: 1;
+        flex: 1 1 auto;
         min-width: 0;
+        overflow-wrap: anywhere;
         display: flex;
         flex-direction: column;
         gap: 0.15rem;

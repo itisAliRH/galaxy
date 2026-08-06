@@ -292,97 +292,74 @@ watch([isOwner, userId], ([owner, id]) => {
             </GAlert>
         </div>
 
-        <div v-else class="user-profile-layout" :class="{ 'user-profile-layout-solo': soloIdentity }">
-            <aside class="user-profile-rail">
-                <GAlert v-if="publicPreview" variant="info" class="user-profile-preview-note">
+        <div v-else class="user-profile-body">
+            <!-- page-wide banners: they span every column so the page state is
+                 unmissable and the columns keep their own rhythm -->
+            <GAlert v-if="publicPreview" variant="info">
+                <div class="user-profile-banner">
                     <span v-localize>This is how visitors see your page.</span>
-                </GAlert>
 
-                <ProfileIdentity
-                    :editable="editing"
-                    :max-links="maxLinks"
-                    :profile="profile"
-                    :save="editing ? saveFields : undefined"
-                    @toggle-about="onToggleSection('about', $event)" />
-
-                <div v-if="ownerMode" class="user-profile-owner-actions">
-                    <GButton
-                        id="profile-public-view"
-                        color="grey"
-                        size="small"
-                        outline
-                        @click="publicPreview = !publicPreview">
-                        <FontAwesomeIcon :icon="publicPreview ? faArrowLeft : faEye" />
-                        <span v-localize>{{ publicPreview ? "Back to editing" : "Public view" }}</span>
+                    <GButton id="profile-public-view-exit" color="blue" size="small" @click="publicPreview = false">
+                        <FontAwesomeIcon :icon="faArrowLeft" />
+                        <span v-localize>Back to editing</span>
                     </GButton>
-
-                    <router-link v-if="editing" class="user-profile-settings-link" to="/user/profile-settings">
-                        <FontAwesomeIcon :icon="faCog" />
-                        Page settings
-                    </router-link>
                 </div>
-            </aside>
+            </GAlert>
 
-            <!-- v-show, not v-if: the cards must mount to fetch and report content,
-                 even while the empty-page solo state hides the columns -->
-            <main v-show="!soloIdentity" class="user-profile-content">
-                <GAlert v-if="isUnpublished && !publicPreview" variant="warning">
-                    <div class="user-profile-unpublished">
-                        <span v-localize>Your page is not published — only you can see it.</span>
+            <GAlert v-if="isUnpublished && !publicPreview" variant="warning">
+                <div class="user-profile-banner">
+                    <span v-localize>Your page is not published — only you can see it.</span>
 
-                        <GButton id="profile-publish-now" color="blue" size="small" @click="publishPage">
-                            <span v-localize>Publish my page</span>
-                        </GButton>
-                    </div>
-                </GAlert>
-
-                <div v-if="editing" v-localize class="gx-callout">
-                    This is your page as visitors see it. Click any text to edit it, use the eye to hide a section, and
-                    drag the handles to reorder sections and items.
+                    <GButton id="profile-publish-now" color="blue" size="small" @click="publishPage">
+                        <span v-localize>Publish my page</span>
+                    </GButton>
                 </div>
+            </GAlert>
 
-                <draggable
-                    v-model="mainSections"
-                    class="user-profile-sections"
-                    :disabled="!editing"
-                    :force-fallback="true"
-                    ghost-class="user-profile-section-ghost"
-                    handle=".profile-section-drag-handle">
-                    <ProfileListCard
-                        v-for="key in mainSections"
-                        :key="key"
-                        :definition="definitionFor(key)"
+            <div v-if="editing" v-localize class="gx-callout">
+                This is your page as visitors see it. Click any text to edit it, use the eye to hide a section, and drag
+                the handles to reorder sections and items.
+            </div>
+
+            <div class="user-profile-layout" :class="{ 'user-profile-layout-solo': soloIdentity }">
+                <aside class="user-profile-rail">
+                    <ProfileIdentity
                         :editable="editing"
-                        :layout="sectionLayout(key)"
-                        :max-items="maxSectionItems"
-                        :username="props.username"
-                        :visible="sectionVisible(key)"
-                        @loaded="onSectionLoaded(key, $event)"
-                        @toggle-visible="onToggleSection(key, $event)"
-                        @update:layout="onSectionLayoutUpdate(key, $event)" />
-                </draggable>
-            </main>
+                        :max-links="maxLinks"
+                        :profile="profile"
+                        :save="editing ? saveFields : undefined"
+                        @toggle-about="onToggleSection('about', $event)" />
 
-            <aside v-if="!sideEmpty" v-show="!soloIdentity" class="user-profile-side">
-                <draggable
-                    v-model="sideSections"
-                    class="user-profile-sections"
-                    :disabled="!editing"
-                    :force-fallback="true"
-                    ghost-class="user-profile-section-ghost"
-                    handle=".profile-section-drag-handle">
-                    <template v-for="key in sideSections">
-                        <ProfileToolsCard
-                            v-if="key === TOOLS_SECTION_KEY"
-                            :key="key"
-                            :editable="editing"
-                            :tools="profile.starred_tools ?? []"
-                            :visible="sectionVisible(key)"
-                            @loaded="onSectionLoaded(key, $event)"
-                            @toggle-visible="onToggleSection(key, $event)" />
+                    <div v-if="editing" class="user-profile-owner-actions">
+                        <GButton
+                            id="profile-public-view"
+                            color="grey"
+                            size="small"
+                            outline
+                            @click="publicPreview = true">
+                            <FontAwesomeIcon :icon="faEye" />
+                            <span v-localize>Public view</span>
+                        </GButton>
 
+                        <router-link class="user-profile-settings-link" to="/user/profile-settings">
+                            <FontAwesomeIcon :icon="faCog" />
+                            Page settings
+                        </router-link>
+                    </div>
+                </aside>
+
+                <!-- v-show, not v-if: the cards must mount to fetch and report content,
+                 even while the empty-page solo state hides the columns -->
+                <main v-show="!soloIdentity" class="user-profile-content">
+                    <draggable
+                        v-model="mainSections"
+                        class="user-profile-sections"
+                        :disabled="!editing"
+                        :force-fallback="true"
+                        ghost-class="user-profile-section-ghost"
+                        handle=".profile-section-drag-handle">
                         <ProfileListCard
-                            v-else
+                            v-for="key in mainSections"
                             :key="key"
                             :definition="definitionFor(key)"
                             :editable="editing"
@@ -393,16 +370,48 @@ watch([isOwner, userId], ([owner, id]) => {
                             @loaded="onSectionLoaded(key, $event)"
                             @toggle-visible="onToggleSection(key, $event)"
                             @update:layout="onSectionLayoutUpdate(key, $event)" />
-                    </template>
-                </draggable>
-            </aside>
+                    </draggable>
+                </main>
+
+                <aside v-if="!sideEmpty" v-show="!soloIdentity" class="user-profile-side">
+                    <draggable
+                        v-model="sideSections"
+                        class="user-profile-sections"
+                        :disabled="!editing"
+                        :force-fallback="true"
+                        ghost-class="user-profile-section-ghost"
+                        handle=".profile-section-drag-handle">
+                        <template v-for="key in sideSections">
+                            <ProfileToolsCard
+                                v-if="key === TOOLS_SECTION_KEY"
+                                :key="key"
+                                :editable="editing"
+                                :tools="profile.starred_tools ?? []"
+                                :visible="sectionVisible(key)"
+                                @loaded="onSectionLoaded(key, $event)"
+                                @toggle-visible="onToggleSection(key, $event)" />
+
+                            <ProfileListCard
+                                v-else
+                                :key="key"
+                                :definition="definitionFor(key)"
+                                :editable="editing"
+                                :layout="sectionLayout(key)"
+                                :max-items="maxSectionItems"
+                                :username="props.username"
+                                :visible="sectionVisible(key)"
+                                @loaded="onSectionLoaded(key, $event)"
+                                @toggle-visible="onToggleSection(key, $event)"
+                                @update:layout="onSectionLayoutUpdate(key, $event)" />
+                        </template>
+                    </draggable>
+                </aside>
+            </div>
         </div>
     </div>
 </template>
 
 <style scoped lang="scss">
-@import "@/style/scss/_breakpoints.scss";
-
 .user-profile-page {
     height: 100%;
     overflow: auto;
@@ -416,8 +425,27 @@ watch([isOwner, userId], ([owner, id]) => {
     margin: 0 auto;
 }
 
-.user-profile-layout {
+.user-profile-body {
     display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.user-profile-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.user-profile-layout {
+    // Columns wrap instead of squeezing: the page renders inside the center
+    // panel, whose width varies with the activity bar and history panel, so
+    // flex-basis + wrap adapts without viewport-based guesses.
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
     gap: 2rem;
 
     &.user-profile-layout-solo {
@@ -425,18 +453,23 @@ watch([isOwner, userId], ([owner, id]) => {
 
         .user-profile-rail {
             flex: 0 1 420px;
+            max-width: 420px;
         }
     }
 
+    // No max-widths: a column that wraps onto its own row fills that row
+    // instead of leaving dead space beside it. The grow ratios keep the
+    // proportions while all three share a row.
     .user-profile-rail {
-        flex: 0 0 280px;
+        flex: 1 1 260px;
+        min-width: 0;
         display: flex;
         flex-direction: column;
         gap: 1rem;
     }
 
     .user-profile-content {
-        flex: 1 1 auto;
+        flex: 4 1 380px;
         min-width: 0;
         display: flex;
         flex-direction: column;
@@ -444,7 +477,7 @@ watch([isOwner, userId], ([owner, id]) => {
     }
 
     .user-profile-side {
-        flex: 0 0 320px;
+        flex: 2 1 300px;
         min-width: 0;
     }
 
@@ -458,14 +491,6 @@ watch([isOwner, userId], ([owner, id]) => {
         opacity: 0.4;
     }
 
-    .user-profile-unpublished {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
     .user-profile-owner-actions {
         display: flex;
         flex-direction: column;
@@ -475,23 +500,6 @@ watch([isOwner, userId], ([owner, id]) => {
 
     .user-profile-settings-link {
         font-size: 0.9rem;
-    }
-
-    @media (max-width: $breakpoint-lg) {
-        flex-wrap: wrap;
-
-        .user-profile-side {
-            flex: 1 1 100%;
-        }
-    }
-
-    @media (max-width: $breakpoint-md) {
-        flex-direction: column;
-
-        .user-profile-rail,
-        .user-profile-side {
-            flex: none;
-        }
     }
 }
 </style>

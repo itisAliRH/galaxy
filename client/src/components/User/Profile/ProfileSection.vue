@@ -110,7 +110,7 @@ function onLimitChange(value: string) {
 
 <template>
     <section class="profile-section" :class="{ 'profile-section-hidden': !props.visible }">
-        <div class="profile-section-header">
+        <div class="profile-section-header mb-2">
             <span
                 v-if="props.editable"
                 class="profile-section-drag-handle"
@@ -180,10 +180,13 @@ function onLimitChange(value: string) {
     .profile-section-header {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
         gap: 0.5rem;
 
         .profile-section-heading {
-            flex: 1;
+            // never squeeze the title into a vertical letter stack: the
+            // controls wrap to their own line first
+            flex: 1 1 12rem;
             min-width: 0;
             margin-bottom: 0;
         }
@@ -213,7 +216,10 @@ function onLimitChange(value: string) {
     .profile-section-controls {
         display: flex;
         align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
         gap: 0.75rem;
+        margin-left: auto;
 
         .profile-section-search {
             display: flex;
@@ -223,7 +229,8 @@ function onLimitChange(value: string) {
             opacity: 0.85;
 
             input {
-                width: 130px;
+                width: 8rem;
+                max-width: 100%;
             }
         }
 

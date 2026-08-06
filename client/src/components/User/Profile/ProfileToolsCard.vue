@@ -124,6 +124,8 @@ watch(
         .profile-tools-name {
             font-weight: 600;
             color: var(--color-galaxy-dark);
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
     }
 }
