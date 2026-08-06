@@ -311,7 +311,7 @@ history_panel:
       selector: 'name input'
       type: data-description
     history_name_edit_label: '[data-description="name display"]'
-    history_name_edit_input: '[data-description="name display"] #click-to-edit-input'
+    history_name_edit_input: '[data-description="name display"] [data-description="click to edit input"]'
     contents: '.history-index .content-item'
     empty_message: '#empty-history-message'
     size: '.history-size'

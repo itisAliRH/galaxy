@@ -31,7 +31,11 @@ watch(
     () => editable.value,
     (value) => {
         if (!value) {
-            emit("input", localValue.value);
+            // an unchanged value (e.g. escape-revert or blur without edits)
+            // is not an input
+            if (localValue.value !== props.value) {
+                emit("input", localValue.value);
+            }
         } else {
             setTimeout(() => {
                 clickToEditInput.value?.focus();
@@ -71,6 +75,7 @@ function revertToOriginal() {
             ref="clickToEditInput"
             v-model="localValue"
             class="w-100"
+            data-description="click to edit input"
             tabindex="0"
             title="Click outside to save, esc to revert changes"
             rows="3"
@@ -86,6 +91,7 @@ function revertToOriginal() {
                 ref="clickToEditInput"
                 v-model="localValue"
                 class="w-100 input-with-icon"
+                data-description="click to edit input"
                 tabindex="0"
                 title="Press enter/return to save, esc to revert changes"
                 contenteditable
@@ -101,19 +107,19 @@ function revertToOriginal() {
         </template>
     </div>
 
+    <!-- the role=button span nests inside the host tag so a heading host
+         (e.g. component="h1") keeps its semantics in the accessibility tree -->
     <component
         :is="props.component || 'label'"
         v-else
         v-g-tooltip.onoverflow
-        role="button"
-        :for="inputId"
         class="click-to-edit-label text-break"
-        tabindex="0"
         :title="computedValue || title"
-        @keyup.enter="editable = true"
         @click.stop="editable = true">
-        <span v-if="computedValue">{{ computedValue }}</span>
-        <i v-else>{{ title }}</i>
+        <span role="button" tabindex="0" @keyup.enter="editable = true">
+            <span v-if="computedValue">{{ computedValue }}</span>
+            <i v-else>{{ title }}</i>
+        </span>
     </component>
 </template>
 
