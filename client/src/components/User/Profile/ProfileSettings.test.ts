@@ -7,9 +7,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import VueRouter from "vue-router";
 
 import { useServerMock } from "@/api/client/__mocks__";
+import { Toast } from "@/composables/toast";
 import { useUserStore } from "@/stores/userStore";
 
 import ProfileSettings from "./ProfileSettings.vue";
+
+vi.mock("@/composables/toast", () => ({
+    Toast: {
+        success: vi.fn(),
+        error: vi.fn(),
+    },
+}));
 
 const localVue = getLocalVue(true);
 localVue.use(VueRouter);
@@ -57,84 +65,92 @@ async function mountComponent() {
     return wrapper;
 }
 
+function publishedInput(wrapper: Awaited<ReturnType<typeof mountComponent>>) {
+    return wrapper.find("#profile-published").element as HTMLInputElement;
+}
+
 describe("ProfileSettings.vue", () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    it("loads an empty, unpublished profile", async () => {
-        server.use(http.get("/api/users/{user_id}/profile", ({ response }) => response(200).json(profileResponse())));
-        const wrapper = await mountComponent();
-
-        expect(wrapper.text()).toContain("Enable my public page");
-        const publishedInput = wrapper.find("#profile-published").element as HTMLInputElement;
-        expect(publishedInput.checked).toBe(false);
-        expect(wrapper.text()).toContain(`/profile/${TEST_USERNAME}`);
-    });
-
-    it("populates fields from an existing profile", async () => {
+    it("shows the toggle reflecting the published state from GET", async () => {
         server.use(
             http.get("/api/users/{user_id}/profile", ({ response }) =>
-                response(200).json(
-                    profileResponse({
-                        published: true,
-                        display_name: "Alice Doe",
-                        description: "Galaxy core committer and software engineer",
-                        orcid: "0000-0002-1825-0097",
-                        visible_sections: { histories: false },
-                    }),
-                ),
+                response(200).json(profileResponse({ published: true })),
             ),
         );
         const wrapper = await mountComponent();
 
-        expect((wrapper.find("#profile-display-name").element as HTMLInputElement).value).toBe("Alice Doe");
-        expect((wrapper.find("#profile-orcid").element as HTMLInputElement).value).toBe("0000-0002-1825-0097");
-        expect((wrapper.find("#profile-published").element as HTMLInputElement).checked).toBe(true);
-        expect((wrapper.find("#profile-section-histories").element as HTMLInputElement).checked).toBe(false);
-        // unset sections default to visible
-        expect((wrapper.find("#profile-section-workflows").element as HTMLInputElement).checked).toBe(true);
+        expect(wrapper.text()).toContain("Enable my public page");
+        expect(publishedInput(wrapper).checked).toBe(true);
     });
 
-    it("saves edited fields via PUT", async () => {
+    it("PUTs exactly { published: true } when the toggle is switched on", async () => {
         let putBody: Record<string, unknown> | undefined;
         server.use(
             http.get("/api/users/{user_id}/profile", ({ response }) => response(200).json(profileResponse())),
             http.put("/api/users/{user_id}/profile", async ({ request, response }) => {
                 putBody = (await request.json()) as Record<string, unknown>;
-                return response(200).json(profileResponse({ display_name: "New Name", published: true }));
+                return response(200).json(profileResponse({ published: true }));
             }),
         );
         const wrapper = await mountComponent();
 
-        await wrapper.find("#profile-display-name").setValue("New Name");
-        await wrapper.find("#profile-settings-save").trigger("click");
+        expect(publishedInput(wrapper).checked).toBe(false);
+        await wrapper.find("#profile-published").setChecked(true);
         await flushPromises();
 
-        expect(putBody).toBeDefined();
-        expect(putBody?.display_name).toBe("New Name");
-        // empty inputs are sent as null, not empty strings
-        expect(putBody?.orcid).toBeNull();
-        expect(putBody?.avatar_seed).toBeNull();
+        expect(putBody).toEqual({ published: true });
+        expect(Object.keys(putBody ?? {})).toEqual(["published"]);
+        expect(publishedInput(wrapper).checked).toBe(true);
+        expect(Toast.success).toHaveBeenCalledWith("Public profile enabled");
     });
 
-    it("randomize stores a fresh seed and sends it on save", async () => {
-        let putBody: Record<string, unknown> | undefined;
+    it("renders the full page URL and links to the profile route", async () => {
+        server.use(http.get("/api/users/{user_id}/profile", ({ response }) => response(200).json(profileResponse())));
+        const wrapper = await mountComponent();
+
+        const link = wrapper.find("a.profile-url");
+        expect(link.exists()).toBe(true);
+        expect(link.text()).toBe(`${window.location.origin}/profile/${TEST_USERNAME}`);
+        expect(link.attributes("href")).toContain(`/profile/${TEST_USERNAME}`);
+    });
+
+    it("explains how to change the username and links to Manage Information", async () => {
+        server.use(http.get("/api/users/{user_id}/profile", ({ response }) => response(200).json(profileResponse())));
+        const wrapper = await mountComponent();
+
+        expect(wrapper.text()).toContain("public name");
+        const links = wrapper.findAll("a").wrappers.map((link) => link.attributes("href"));
+        expect(links.some((href) => href?.includes("/user/information"))).toBe(true);
+    });
+
+    it("does not render the removed profile inputs or a save button", async () => {
+        server.use(http.get("/api/users/{user_id}/profile", ({ response }) => response(200).json(profileResponse())));
+        const wrapper = await mountComponent();
+
+        expect(wrapper.find("#profile-orcid").exists()).toBe(false);
+        expect(wrapper.find("#profile-display-name").exists()).toBe(false);
+        expect(wrapper.find("#profile-settings-save").exists()).toBe(false);
+    });
+
+    it("reverts the toggle when the PUT fails", async () => {
         server.use(
             http.get("/api/users/{user_id}/profile", ({ response }) => response(200).json(profileResponse())),
-            http.put("/api/users/{user_id}/profile", async ({ request, response }) => {
-                putBody = (await request.json()) as Record<string, unknown>;
-                return response(200).json(profileResponse());
-            }),
+            http.put("/api/users/{user_id}/profile", ({ response }) =>
+                response("4XX").json({ err_msg: "publish failed", err_code: 400001 }, { status: 400 }),
+            ),
         );
         const wrapper = await mountComponent();
 
-        await wrapper.find("#profile-avatar-randomize").trigger("click");
-        await wrapper.find("#profile-settings-save").trigger("click");
+        expect(publishedInput(wrapper).checked).toBe(false);
+        await wrapper.find("#profile-published").setChecked(true);
         await flushPromises();
 
-        expect(typeof putBody?.avatar_seed).toBe("string");
-        expect((putBody?.avatar_seed as string).length).toBeGreaterThan(0);
+        expect(publishedInput(wrapper).checked).toBe(false);
+        expect(Toast.error).toHaveBeenCalledWith("publish failed");
+        expect(Toast.success).not.toHaveBeenCalled();
     });
 
     it("shows an error message when loading fails", async () => {

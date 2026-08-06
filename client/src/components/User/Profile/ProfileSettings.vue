@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { faDice, faSave } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { BAlert, BFormGroup, BFormInput, BFormTextarea } from "bootstrap-vue";
+import { BAlert } from "bootstrap-vue";
 import { storeToRefs } from "pinia";
 import { computed, ref, watch } from "vue";
 
@@ -10,23 +8,11 @@ import { Toast } from "@/composables/toast";
 import { useUserStore } from "@/stores/userStore";
 import { errorMessageAsString } from "@/utils/simple-error";
 
-import ProfileAvatar from "./ProfileAvatar.vue";
-import GButton from "@/components/BaseComponents/GButton.vue";
 import GCheckbox from "@/components/BaseComponents/GCheckbox.vue";
-import AsyncButton from "@/components/Common/AsyncButton.vue";
 import BreadcrumbHeading from "@/components/Common/BreadcrumbHeading.vue";
 import LoadingSpan from "@/components/LoadingSpan.vue";
 
 const breadcrumbItems = [{ title: "User Preferences", to: "/user" }, { title: "Public Profile" }];
-
-/** Sections a user can show on their public page. Extend as cards land. */
-const SECTIONS = [
-    { key: "about", label: "About me", hint: "Description, affiliation, research interests, and links." },
-    { key: "histories", label: "Published histories", hint: "Histories you have already published." },
-    { key: "workflows", label: "Published workflows", hint: "Workflows you have already published." },
-    { key: "pages", label: "Published pages", hint: "Galaxy pages you have already published." },
-    { key: "visualizations", label: "Published visualizations", hint: "Visualizations you have already published." },
-] as const;
 
 const userStore = useUserStore();
 const { currentUser } = storeToRefs(userStore);
@@ -40,32 +26,9 @@ const loading = ref(false);
 const errorMessage = ref<string | null>(null);
 
 const published = ref(false);
-const displayName = ref("");
-const description = ref("");
-const affiliation = ref("");
-const researchInterests = ref("");
-const orcid = ref("");
-const avatarSeed = ref("");
-const visibleSections = ref<Record<string, boolean>>({});
 
-const profileUrl = computed(() => `/profile/${username.value}`);
-
-function isSectionVisible(key: string) {
-    return visibleSections.value[key] ?? true;
-}
-
-function toggleSection(key: string, value: boolean) {
-    visibleSections.value = { ...visibleSections.value, [key]: value };
-}
-
-/** Shuffle the generated avatar; save persists the seed. */
-function randomizeAvatar() {
-    avatarSeed.value = crypto.randomUUID();
-}
-
-function resetAvatar() {
-    avatarSeed.value = "";
-}
+const profilePath = computed(() => `/profile/${username.value}`);
+const profileUrl = computed(() => `${window.location.origin}${profilePath.value}`);
 
 async function loadProfile() {
     if (!userId.value) {
@@ -83,43 +46,30 @@ async function loadProfile() {
         }
 
         published.value = data.published;
-        displayName.value = data.display_name ?? "";
-        description.value = data.description ?? "";
-        affiliation.value = data.affiliation ?? "";
-        researchInterests.value = data.research_interests ?? "";
-        orcid.value = data.orcid ?? "";
-        avatarSeed.value = data.avatar_seed ?? "";
-        visibleSections.value = { ...(data.visible_sections ?? {}) };
     } finally {
         loading.value = false;
     }
 }
 
-async function saveProfile() {
+/** Toggling publishes immediately; only `published` is sent so no other profile field is modified. */
+async function onTogglePublished(value: boolean) {
     if (!userId.value) {
         return;
     }
+    published.value = value;
+
     const { error } = await GalaxyApi().PUT("/api/users/{user_id}/profile", {
         params: { path: { user_id: userId.value } },
-        body: {
-            published: published.value,
-            display_name: displayName.value || null,
-            description: description.value || null,
-            affiliation: affiliation.value || null,
-            research_interests: researchInterests.value || null,
-            orcid: orcid.value || null,
-            avatar_seed: avatarSeed.value || null,
-            visible_sections: visibleSections.value,
-        },
+        body: { published: value },
     });
 
     if (error) {
-        errorMessage.value = errorMessageAsString(error);
+        published.value = !value;
+        Toast.error(errorMessageAsString(error));
         return;
     }
 
-    errorMessage.value = null;
-    Toast.success("Public profile updated");
+    Toast.success(value ? "Public profile enabled" : "Public profile disabled");
 }
 
 // The user store loads asynchronously on a direct page load; fetch the
@@ -132,8 +82,8 @@ watch(userId, loadProfile, { immediate: true });
         <BreadcrumbHeading :items="breadcrumbItems" />
 
         <div v-localize class="profile-settings-description">
-            Control whether you have a public profile page and what it shows. Your page only ever lists content you have
-            already published.
+            Control whether you have a public profile page. Your page only ever lists content you have already
+            published.
         </div>
 
         <BAlert v-if="errorMessage" show dismissible fade variant="warning" @dismissed="errorMessage = null">
@@ -146,96 +96,31 @@ watch(userId, loadProfile, { immediate: true });
 
         <div v-else class="profile-settings-body">
             <div class="card-container">
-                <GCheckbox id="profile-published" v-model="published" toggle>
+                <GCheckbox id="profile-published" toggle :value="published" @input="onTogglePublished">
                     <span v-localize>Enable my public page</span>
                 </GCheckbox>
 
                 <div class="profile-url-hint">
                     <span v-if="published" v-localize>Anyone with the link can see it, signed in or not:</span>
-                    <span v-else v-localize>When enabled, your page will be available at:</span>
-                    <router-link v-if="published" :to="profileUrl" class="profile-url">{{ profileUrl }}</router-link>
-                    <span v-else class="profile-url">{{ profileUrl }}</span>
+                    <span v-else v-localize>Only you can see it until you enable your page:</span>
+                    <router-link class="profile-url" :to="profilePath">{{ profileUrl }}</router-link>
+                </div>
+
+                <div class="profile-username-hint">
+                    <span v-localize>
+                        Your page address comes from your public name (username). To change it, edit the Public name
+                        field in
+                    </span>
+                    <router-link to="/user/information">Manage Information</router-link>.
                 </div>
             </div>
 
-            <div class="card-container">
-                <h2 v-localize class="profile-settings-heading">About me</h2>
-
-                <div class="profile-avatar-editor">
-                    <ProfileAvatar :username="username || ''" :seed="avatarSeed || undefined" :size="96" />
-
-                    <div class="profile-avatar-actions">
-                        <div v-localize class="profile-avatar-hint">
-                            Your avatar is generated — no upload needed. Shuffle until you like one.
-                        </div>
-
-                        <div>
-                            <GButton id="profile-avatar-randomize" color="blue" size="small" @click="randomizeAvatar">
-                                <FontAwesomeIcon :icon="faDice" />
-                                <span v-localize>Randomize avatar</span>
-                            </GButton>
-
-                            <GButton
-                                v-if="avatarSeed"
-                                id="profile-avatar-reset"
-                                color="grey"
-                                size="small"
-                                @click="resetAvatar">
-                                <span v-localize>Reset to default</span>
-                            </GButton>
-                        </div>
-                    </div>
-                </div>
-
-                <BFormGroup label="Display name" label-for="profile-display-name">
-                    <BFormInput id="profile-display-name" v-model="displayName" :placeholder="username" />
-                </BFormGroup>
-
-                <BFormGroup
-                    label="Description"
-                    label-for="profile-description"
-                    description="A short line shown under your name.">
-                    <BFormTextarea id="profile-description" v-model="description" rows="2" no-resize />
-                </BFormGroup>
-
-                <BFormGroup label="Affiliation" label-for="profile-affiliation">
-                    <BFormInput id="profile-affiliation" v-model="affiliation" />
-                </BFormGroup>
-
-                <BFormGroup label="Research interests" label-for="profile-research-interests">
-                    <BFormTextarea id="profile-research-interests" v-model="researchInterests" rows="3" no-resize />
-                </BFormGroup>
-
-                <BFormGroup label="ORCID iD" label-for="profile-orcid" description="Format: 0000-0000-0000-0000.">
-                    <BFormInput id="profile-orcid" v-model="orcid" placeholder="0000-0000-0000-0000" />
-                </BFormGroup>
-            </div>
-
-            <div class="card-container">
-                <h2 v-localize class="profile-settings-heading">Show on my page</h2>
-
-                <div v-localize class="profile-sections-hint">
-                    Hiding a section only removes it from your profile page. Published items stay published and remain
-                    reachable at their own links.
-                </div>
-
-                <div v-for="section in SECTIONS" :key="section.key" class="profile-section-toggle">
-                    <GCheckbox
-                        :id="`profile-section-${section.key}`"
-                        :value="isSectionVisible(section.key)"
-                        toggle
-                        @input="(value) => toggleSection(section.key, value)">
-                        <span v-localize>{{ section.label }}</span>
-                    </GCheckbox>
-
-                    <div v-localize class="profile-section-hint">{{ section.hint }}</div>
-                </div>
-            </div>
-
-            <div class="d-flex justify-content-center">
-                <AsyncButton id="profile-settings-save" :action="saveProfile" :icon="faSave" color="blue" size="medium">
-                    <span v-localize>Save</span>
-                </AsyncButton>
+            <div class="profile-edit-hint">
+                <span v-localize>
+                    To change what your page shows — avatar, description, links, and sections — open your page and edit
+                    it directly.
+                </span>
+                <router-link :to="profilePath">Open my page</router-link>
             </div>
         </div>
     </section>
@@ -247,12 +132,6 @@ watch(userId, loadProfile, { immediate: true });
         margin-bottom: 1rem;
     }
 
-    .profile-settings-heading {
-        font-size: 1.1rem;
-        font-weight: 700;
-        margin-bottom: 0.75rem;
-    }
-
     .profile-url-hint {
         margin-top: 0.5rem;
 
@@ -262,36 +141,18 @@ watch(userId, loadProfile, { immediate: true });
         }
     }
 
-    .profile-avatar-editor {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1rem;
-
-        .profile-avatar-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-
-        .profile-avatar-hint {
-            font-size: 0.85rem;
-            opacity: 0.7;
-        }
+    .profile-username-hint,
+    .profile-edit-hint {
+        font-size: 0.85rem;
+        opacity: 0.7;
     }
 
-    .profile-sections-hint {
-        margin-bottom: 0.75rem;
+    .profile-username-hint {
+        margin-top: 0.75rem;
     }
 
-    .profile-section-toggle {
-        margin-bottom: 0.75rem;
-
-        .profile-section-hint {
-            font-size: 0.85rem;
-            opacity: 0.7;
-            margin-left: 2.5rem;
-        }
+    .profile-edit-hint {
+        margin-top: 0.5rem;
     }
 }
 
