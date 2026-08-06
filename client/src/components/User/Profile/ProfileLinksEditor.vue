@@ -9,18 +9,10 @@ import {
     faTwitter,
     faYoutube,
 } from "@fortawesome/free-brands-svg-icons";
-import {
-    faCheck,
-    faExternalLinkAlt,
-    faGlobe,
-    faPencilAlt,
-    faPlus,
-    faTimes,
-    faTrash,
-} from "@fortawesome/free-solid-svg-icons";
+import { faExternalLinkAlt, faGlobe, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { BFormInput } from "bootstrap-vue";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 import type { components } from "@/api/schema";
 
@@ -41,7 +33,7 @@ const BRAND_ICONS: [RegExp, IconDefinition][] = [
 
 interface Props {
     /**
-     * Whether the owner is viewing: enables add, edit, and remove controls
+     * Whether the owner is viewing: renders every link as an editable row
      * @default false
      */
     editable?: boolean;
@@ -67,13 +59,23 @@ const emit = defineEmits<{
     (e: "update:links", value: UserProfileLink[]): void;
 }>();
 
-/** Index of the row being edited, links.length for a new row, null when idle. */
-const editingIndex = ref<number | null>(null);
-const draftLabel = ref("");
-const draftUrl = ref("");
-const draftError = ref<string | null>(null);
+/**
+ * Editable rows, including the half-typed ones. Only rows with a usable URL
+ * are emitted, so a row being typed into never truncates the saved list.
+ */
+const rows = ref<UserProfileLink[]>(props.links.map((link) => ({ ...link })));
 
-const canAdd = computed(() => props.links.length < props.maxLinks);
+watch(
+    () => props.links,
+    (links) => {
+        // ignore the echo of our own emit; adopt anything else (load, cancel)
+        if (JSON.stringify(links) !== JSON.stringify(validRows())) {
+            rows.value = links.map((link) => ({ ...link }));
+        }
+    },
+);
+
+const canAdd = computed(() => rows.value.length < props.maxLinks);
 
 function hostname(url: string) {
     try {
@@ -81,6 +83,16 @@ function hostname(url: string) {
     } catch {
         return url;
     }
+}
+
+function isUsable(link: UserProfileLink) {
+    return /^https?:\/\/.+/.test(link.url.trim());
+}
+
+function validRows(): UserProfileLink[] {
+    return rows.value
+        .filter(isUsable)
+        .map((link) => ({ url: link.url.trim(), label: link.label.trim() || hostname(link.url.trim()) }));
 }
 
 function linkIcon(link: UserProfileLink): IconDefinition {
@@ -98,159 +110,87 @@ function linkLabel(link: UserProfileLink) {
     return link.label || hostname(link.url);
 }
 
-function startEdit(index: number) {
-    editingIndex.value = index;
-    draftLabel.value = props.links[index]?.label ?? "";
-    draftUrl.value = props.links[index]?.url ?? "";
-    draftError.value = null;
+function commit() {
+    emit("update:links", validRows());
 }
 
-function startAdd() {
-    editingIndex.value = props.links.length;
-    draftLabel.value = "";
-    draftUrl.value = "https://";
-    draftError.value = null;
-}
-
-function cancelEdit() {
-    editingIndex.value = null;
-    draftError.value = null;
-}
-
-function commitEdit() {
-    const label = draftLabel.value.trim();
-    const url = draftUrl.value.trim();
-    if (!/^https?:\/\/.+/.test(url)) {
-        draftError.value = "The URL must start with http:// or https://.";
-        return;
+function onUrlInput(index: number, value: string) {
+    const row = rows.value[index];
+    if (row) {
+        row.url = value;
+        commit();
     }
-    const updated = [...props.links];
-    updated.splice(editingIndex.value ?? updated.length, 1, { label: label || hostname(url), url });
-    emit("update:links", updated);
-    cancelEdit();
 }
 
-function removeLink(index: number) {
-    const updated = props.links.filter((_, i) => i !== index);
-    emit("update:links", updated);
-    cancelEdit();
+function onLabelInput(index: number, value: string) {
+    const row = rows.value[index];
+    if (row) {
+        row.label = value;
+        commit();
+    }
+}
+
+function addRow() {
+    rows.value.push({ label: "", url: "" });
+}
+
+function removeRow(index: number) {
+    rows.value.splice(index, 1);
+    commit();
 }
 </script>
 
 <template>
-    <div v-if="props.links.length > 0 || props.editable" class="profile-links d-flex flex-column">
-        <template v-for="(link, index) in props.links">
-            <div
-                v-if="editingIndex !== index"
-                :key="`link-${index}`"
-                class="profile-links-row d-flex align-items-center">
-                <FontAwesomeIcon :icon="linkIcon(link)" fixed-width />
+    <div v-if="props.editable" class="profile-links d-flex flex-column">
+        <!-- every link is a live input pair; the label is optional and falls
+             back to the URL's hostname -->
+        <div v-for="(row, index) in rows" :key="index" class="profile-links-editor d-flex flex-column">
+            <div class="profile-links-editor-url d-flex align-items-center">
+                <FontAwesomeIcon :icon="linkIcon(row)" fixed-width />
 
-                <a class="profile-links-anchor" :href="link.url" rel="noopener noreferrer" target="_blank">
-                    {{ linkLabel(link) }}
-                    <FontAwesomeIcon class="profile-links-external" :icon="faExternalLinkAlt" size="xs" />
-                </a>
-
-                <span v-if="props.editable" class="profile-links-actions d-inline-flex flex-gapx-1">
-                    <GButton
-                        color="grey"
-                        size="small"
-                        icon-only
-                        transparent
-                        title="Edit link"
-                        aria-label="Edit link"
-                        @click="startEdit(index)">
-                        <FontAwesomeIcon :icon="faPencilAlt" fixed-width />
-                    </GButton>
-
-                    <GButton
-                        color="grey"
-                        size="small"
-                        icon-only
-                        transparent
-                        title="Remove link"
-                        aria-label="Remove link"
-                        @click="removeLink(index)">
-                        <FontAwesomeIcon :icon="faTrash" fixed-width />
-                    </GButton>
-                </span>
-            </div>
-
-            <div v-else :key="`link-edit-${index}`" class="profile-links-editor d-flex flex-column align-items-stretch">
-                <BFormInput v-model="draftUrl" placeholder="https://…" size="sm" type="url" @keyup.enter="commitEdit" />
-
-                <BFormInput v-model="draftLabel" placeholder="Label (optional)" size="sm" @keyup.enter="commitEdit" />
-
-                <span class="profile-links-editor-actions d-inline-flex justify-content-end flex-gapx-1">
-                    <GButton
-                        color="grey"
-                        size="small"
-                        icon-only
-                        transparent
-                        title="Save link"
-                        aria-label="Save link"
-                        @click="commitEdit">
-                        <FontAwesomeIcon :icon="faCheck" fixed-width />
-                    </GButton>
-
-                    <GButton
-                        color="grey"
-                        size="small"
-                        icon-only
-                        transparent
-                        title="Cancel"
-                        aria-label="Cancel"
-                        @click="cancelEdit">
-                        <FontAwesomeIcon :icon="faTimes" fixed-width />
-                    </GButton>
-                </span>
-            </div>
-        </template>
-
-        <div
-            v-if="editingIndex === props.links.length"
-            class="profile-links-editor d-flex flex-column align-items-stretch">
-            <BFormInput v-model="draftUrl" placeholder="https://…" size="sm" type="url" @keyup.enter="commitEdit" />
-
-            <BFormInput v-model="draftLabel" placeholder="Label (optional)" size="sm" @keyup.enter="commitEdit" />
-
-            <span class="profile-links-editor-actions d-inline-flex justify-content-end flex-gapx-1">
-                <GButton
-                    color="grey"
-                    size="small"
-                    icon-only
-                    transparent
-                    title="Save link"
-                    aria-label="Save link"
-                    @click="commitEdit">
-                    <FontAwesomeIcon :icon="faCheck" fixed-width />
-                </GButton>
+                <BFormInput
+                    class="flex-fill"
+                    placeholder="https://…"
+                    size="sm"
+                    type="url"
+                    :value="row.url"
+                    @update="onUrlInput(index, $event)" />
 
                 <GButton
                     color="grey"
                     size="small"
                     icon-only
                     transparent
-                    title="Cancel"
-                    aria-label="Cancel"
-                    @click="cancelEdit">
-                    <FontAwesomeIcon :icon="faTimes" fixed-width />
+                    title="Remove link"
+                    aria-label="Remove link"
+                    @click="removeRow(index)">
+                    <FontAwesomeIcon :icon="faTrash" fixed-width />
                 </GButton>
-            </span>
+            </div>
+
+            <BFormInput
+                class="profile-links-editor-label"
+                placeholder="Label (optional)"
+                size="sm"
+                :value="row.label"
+                @update="onLabelInput(index, $event)" />
         </div>
 
-        <div v-if="draftError" class="profile-links-error">{{ draftError }}</div>
-
-        <GButton
-            v-if="props.editable && canAdd && editingIndex === null"
-            id="profile-links-add"
-            color="grey"
-            size="small"
-            transparent
-            @click="startAdd">
+        <GButton v-if="canAdd" id="profile-links-add" color="grey" size="small" transparent @click="addRow">
             <FontAwesomeIcon :icon="faPlus" />
             <span v-localize>Add link</span>
         </GButton>
+    </div>
+
+    <div v-else-if="props.links.length > 0" class="profile-links d-flex flex-column">
+        <div v-for="(link, index) in props.links" :key="index" class="profile-links-row d-flex align-items-center">
+            <FontAwesomeIcon :icon="linkIcon(link)" fixed-width />
+
+            <a class="profile-links-anchor" :href="link.url" rel="noopener noreferrer" target="_blank">
+                {{ linkLabel(link) }}
+                <FontAwesomeIcon class="profile-links-external" :icon="faExternalLinkAlt" size="xs" />
+            </a>
+        </div>
     </div>
 </template>
 
@@ -271,37 +211,18 @@ function removeLink(index: number) {
         }
     }
 
-    // The URL and label inputs stack so each gets a readable width.
     .profile-links-editor {
-        gap: 0.35rem;
-    }
+        gap: 0.25rem;
 
-    // GButton supplies the transparent background, padding, colour, and focus
-    // ring; only the resting dimming of these secondary actions is local.
-    .profile-links-actions,
-    .profile-links-editor-actions {
-        .g-button {
-            opacity: 0.55;
-
-            &:hover,
-            &:focus-visible {
-                opacity: 1;
-            }
+        .profile-links-editor-url {
+            gap: 0.35rem;
         }
-    }
 
-    .profile-links-row .profile-links-actions {
-        opacity: 0;
-    }
-
-    .profile-links-row:hover .profile-links-actions,
-    .profile-links-row:focus-within .profile-links-actions {
-        opacity: 1;
-    }
-
-    .profile-links-error {
-        font-size: 0.8rem;
-        color: var(--color-galaxy-error, #a94442);
+        // aligns the label input under the URL input, past the brand icon
+        .profile-links-editor-label {
+            margin-left: 1.6rem;
+            width: auto;
+        }
     }
 }
 </style>
