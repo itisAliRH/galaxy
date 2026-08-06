@@ -160,6 +160,10 @@ class GalaxyAppConfigurationAttributes:
     password_expiration_period: timedelta
     enable_account_interface: bool
     enable_user_profile_pages: bool
+    user_profile_max_links: int
+    user_profile_max_section_items: int
+    user_profile_max_section_item_ids: int
+    user_profile_max_starred_tools: int
     session_duration: int
     ga_code: str | None
     plausible_server: str | None
