@@ -32,8 +32,10 @@ class TestUserProfilePagesEnabledIntegration(integration_util.IntegrationTestCas
             "description": "Galaxy core committer and software engineer",
             "affiliation": "University of Freiburg",
             "orcid": VALID_ORCID,
-            "avatar_seed": "carbon-fox-42",
-            "links": [{"label": "website", "url": "https://example.org"}],
+            "links": [
+                {"type": "github", "url": "https://github.com/alice"},
+                {"url": "https://example.org"},
+            ],
             "visible_sections": {"histories": True, "workflows": False},
         }
         response = self.galaxy_interactor.put(f"users/{user_id}/profile", data=payload, json=True)
@@ -41,8 +43,13 @@ class TestUserProfilePagesEnabledIntegration(integration_util.IntegrationTestCas
         profile = response.json()
         assert profile["display_name"] == "Integration Alice"
         assert profile["orcid"] == VALID_ORCID
-        assert profile["avatar_seed"] == "carbon-fox-42"
+        assert profile["links"] == [
+            {"type": "github", "url": "https://github.com/alice"},
+            {"type": "custom", "url": "https://example.org"},
+        ]
         assert profile["published"] is False
+        assert profile["id"] == user_id
+        assert profile["email_hash"]
 
         # partial update: unset fields stay untouched
         response = self.galaxy_interactor.put(f"users/{user_id}/profile", data={"published": True}, json=True)
@@ -122,7 +129,6 @@ class TestUserProfilePagesEnabledIntegration(integration_util.IntegrationTestCas
             "published": True,
             "display_name": "Public Alice",
             "description": "Visible to everyone",
-            "avatar_seed": "public-seed-1",
             "visible_sections": {"histories": True},
         }
         response = self.galaxy_interactor.put(f"users/{user_id}/profile", data=payload, json=True)
@@ -134,10 +140,113 @@ class TestUserProfilePagesEnabledIntegration(integration_util.IntegrationTestCas
         assert public["username"] == username
         assert public["display_name"] == "Public Alice"
         assert public["visible_sections"] == {"histories": True}
-        assert public["avatar_seed"] == "public-seed-1"
-        # the public payload must never carry account internals
+        # the gravatar hash and encoded user id are public; account internals are not
+        assert public["email_hash"]
+        assert public["id"] == user_id
         assert "email" not in public
-        assert "id" not in public
+        assert "published" not in public
+        assert "avatar_seed" not in public
+
+    def test_public_profile_by_encoded_user_id(self):
+        user_id = self._current_user_id()
+        username = self._current_username()
+        response = self.galaxy_interactor.put(f"users/{user_id}/profile", data={"published": True}, json=True)
+        self._assert_status_code_is(response, 200)
+
+        by_username = self.galaxy_interactor.get(f"profiles/{username}", anon=True)
+        by_id = self.galaxy_interactor.get(f"profiles/{user_id}", anon=True)
+        self._assert_status_code_is(by_username, 200)
+        self._assert_status_code_is(by_id, 200)
+        # the id form is the username-change-proof permalink; payloads match
+        assert by_id.json() == by_username.json()
+        assert by_id.json()["username"] == username
+
+        # a well-formed encoded id that resolves to no published profile 404s
+        # with the same body as an unknown username
+        bogus_id = self.galaxy_interactor.get("profiles/0123456789abcdef", anon=True)
+        unknown = self.galaxy_interactor.get("profiles/no-such-user-xyz", anon=True)
+        self._assert_status_code_is(bogus_id, 404)
+        self._assert_status_code_is(unknown, 404)
+        assert bogus_id.content == unknown.content
+
+    def _create_markdown_page(self, slug="profile-readme", title="My Readme"):
+        response = self.galaxy_interactor.post(
+            "pages",
+            data={"title": title, "slug": slug, "content_format": "markdown", "content": "# Hello"},
+            json=True,
+        )
+        self._assert_status_code_is(response, 200)
+        return response.json()
+
+    def test_readme_page_lifecycle(self):
+        user_id = self._current_user_id()
+        username = self._current_username()
+        page = self._create_markdown_page()
+
+        response = self.galaxy_interactor.put(
+            f"users/{user_id}/profile", data={"published": True, "readme_page_id": page["id"]}, json=True
+        )
+        self._assert_status_code_is(response, 200)
+        # owner sees the readme flagged as unpublished
+        detail = response.json()
+        assert detail["readme_page"]["id"] == page["id"]
+        assert detail["readme_page"]["published"] is False
+        # public payload omits it until the page is published
+        public = self.galaxy_interactor.get(f"profiles/{username}", anon=True).json()
+        assert public["readme_page"] is None
+
+        response = self.galaxy_interactor.put(f"pages/{page['id']}/publish")
+        self._assert_status_code_is(response, 200)
+        public = self.galaxy_interactor.get(f"profiles/{username}", anon=True).json()
+        assert public["readme_page"]["id"] == page["id"]
+        assert public["readme_page"]["title"] == "My Readme"
+        assert public["readme_page"]["content_format"] == "markdown"
+        # the content itself is served by the pages API, anonymously
+        page_response = self.galaxy_interactor.get(f"pages/{page['id']}", anon=True)
+        self._assert_status_code_is(page_response, 200)
+        assert "Hello" in page_response.json()["content"]
+
+        response = self.galaxy_interactor.put(f"pages/{page['id']}/unpublish")
+        self._assert_status_code_is(response, 200)
+        public = self.galaxy_interactor.get(f"profiles/{username}", anon=True).json()
+        assert public["readme_page"] is None
+
+        # explicit null clears the readme
+        response = self.galaxy_interactor.put(f"users/{user_id}/profile", data={"readme_page_id": None}, json=True)
+        self._assert_status_code_is(response, 200)
+        assert response.json()["readme_page"] is None
+
+    def test_readme_page_must_be_own_markdown_page(self):
+        user_id = self._current_user_id()
+        response = self.galaxy_interactor.put(
+            f"users/{user_id}/profile", data={"readme_page_id": "0123456789abcdef"}, json=True
+        )
+        self._assert_status_code_is(response, 400)
+
+    def test_duplicate_well_known_link_rejected(self):
+        user_id = self._current_user_id()
+        links = [
+            {"type": "github", "url": "https://github.com/alice"},
+            {"type": "github", "url": "https://github.com/bob"},
+        ]
+        response = self.galaxy_interactor.put(f"users/{user_id}/profile", data={"links": links}, json=True)
+        self._assert_status_code_is(response, 400)
+
+    def test_starred_tools_slider_limits_public_payload_only(self):
+        user_id = self._current_user_id()
+        username = self._current_username()
+        for tool_id in ("cat1", "Show beginning1"):
+            response = self.galaxy_interactor.put(
+                f"users/{user_id}/favorites/tools", data={"object_id": tool_id}, json=True
+            )
+            self._assert_status_code_is(response, 200)
+        payload = {"published": True, "layout": {"sections": {"tools": {"limit": 1}}}}
+        response = self.galaxy_interactor.put(f"users/{user_id}/profile", data=payload, json=True)
+        self._assert_status_code_is(response, 200)
+        # the owner still sees the full list to adjust the slider
+        assert len(response.json()["starred_tools"]) == 2
+        public = self.galaxy_interactor.get(f"profiles/{username}", anon=True).json()
+        assert len(public["starred_tools"]) == 1
 
     def test_public_profile_404s_are_indistinguishable(self):
         user_id = self._current_user_id()
