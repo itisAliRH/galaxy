@@ -3,6 +3,7 @@ import { faArrowLeft, faCheck, faCog, faEye, faPencilAlt, faSpinner, faTimes } f
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { storeToRefs } from "pinia";
 import { computed, onMounted, ref, set, watch } from "vue";
+import { useRouter } from "vue-router/composables";
 import draggable from "vuedraggable";
 
 import { GalaxyApi } from "@/api";
@@ -16,12 +17,15 @@ import {
     DEFAULT_SECTION_ORDER,
     PROFILE_SECTIONS,
     type ProfileColumn,
+    type ProfileListItem,
     type ProfileSectionDefinition,
     TOOLS_SECTION_KEY,
 } from "./sections";
 
 import ProfileIdentity from "./ProfileIdentity.vue";
+import ProfileItemPreviewModal from "./ProfileItemPreviewModal.vue";
 import ProfileListCard from "./ProfileListCard.vue";
+import ProfileReadmeCard from "./ProfileReadmeCard.vue";
 import ProfileToolsCard from "./ProfileToolsCard.vue";
 import GAlert from "@/components/BaseComponents/GAlert.vue";
 import GButton from "@/components/BaseComponents/GButton.vue";
@@ -35,9 +39,10 @@ type UserProfileUpdatePayload = components["schemas"]["UserProfileUpdatePayload"
 
 interface Props {
     /**
-     * Username from the /profile/:username route
+     * Username or encoded user id from the /profile/:identifier route.
+     * Id URLs survive username changes; they canonicalize to the username.
      */
-    username: string;
+    identifier: string;
 }
 
 const props = defineProps<Props>();
@@ -45,6 +50,7 @@ const props = defineProps<Props>();
 const userStore = useUserStore();
 const { currentUser } = storeToRefs(userStore);
 const { config, isConfigLoaded } = useConfig(true);
+const router = useRouter();
 
 const loading = ref(true);
 const notFound = ref(false);
@@ -65,6 +71,13 @@ const identityEditRequested = ref(false);
 const identityDraft = ref<Partial<UserProfileUpdatePayload>>({});
 /** Which sections reported whether they have published items, keyed by section key. */
 const sectionHasContent = ref<Record<string, boolean>>({});
+/**
+ * The item being previewed, page-level: one modal for the whole page — a
+ * per-card modal would be unmounted mid-preview when a section drag
+ * re-renders the card subtrees.
+ */
+const previewTarget = ref<{ definition: ProfileSectionDefinition; item: ProfileListItem } | null>(null);
+const previewShown = ref(false);
 /** Monotonic guard so a stale response never overwrites a newer load. */
 let loadSeq = 0;
 /** Serializes saves so read-modify-write fields cannot clobber each other. */
@@ -73,10 +86,19 @@ let pendingSave: Promise<unknown> = Promise.resolve();
 const userId = computed(() =>
     currentUser.value && "id" in currentUser.value ? (currentUser.value.id as string) : undefined,
 );
+/** The identifier may be the owner's username or their encoded user id. */
 const isOwner = computed(
     () =>
-        currentUser.value !== null && "username" in currentUser.value && currentUser.value.username === props.username,
+        currentUser.value !== null &&
+        "username" in currentUser.value &&
+        (currentUser.value.username === props.identifier || userId.value === props.identifier),
 );
+/**
+ * Username for section fetchers (they build `user:'<name>'` filters, which an
+ * encoded id would silently turn into zero matches); the loaded profile is
+ * authoritative, the route param only stands in before the first load.
+ */
+const resolvedUsername = computed(() => profile.value?.username ?? props.identifier);
 /** Owner mode needs the id for the self-scoped API, not just a username match. */
 const ownerMode = computed(() => isOwner.value && userId.value !== undefined && profile.value !== null);
 /** Editing affordances are hidden while the owner previews the public view. */
@@ -94,6 +116,10 @@ const maxSectionItems = computed(() =>
     isConfigLoaded.value ? (config.value.user_profile_max_section_items ?? 20) : 20,
 );
 const maxLinks = computed(() => (isConfigLoaded.value ? (config.value.user_profile_max_links ?? 10) : 10));
+/** The tools slider is additionally capped by the public starred-tools limit. */
+const maxStarredTools = computed(() =>
+    Math.min(maxSectionItems.value, isConfigLoaded.value ? (config.value.user_profile_max_starred_tools ?? 50) : 50),
+);
 
 const layout = computed<UserProfileLayout>(() => profile.value?.layout ?? {});
 
@@ -127,9 +153,26 @@ function sectionsModelForColumn(column: ProfileColumn) {
 const mainSections = sectionsModelForColumn("main");
 const sideSections = sectionsModelForColumn("side");
 
+/**
+ * Whether the readme renders for the current viewer. The server already gates
+ * the public payload; the owner's payload additionally carries blocked states
+ * (unpublished, deleted), which the owner's public preview must hide to stay
+ * faithful to what visitors see.
+ */
+const readmeVisible = computed(() => {
+    const readme = profile.value?.readme_page;
+    if (!readme) {
+        return false;
+    }
+    if (asVisitor.value && "published" in readme) {
+        return readme.published === true && readme.deleted !== true;
+    }
+    return true;
+});
+
 /** Visitors get the identity centered once every section reported empty. */
 const soloIdentity = computed(() => {
-    if (!asVisitor.value) {
+    if (!asVisitor.value || readmeVisible.value) {
         return false;
     }
     const keys = [...mainSections.value, ...sideSections.value];
@@ -144,10 +187,13 @@ const sideEmpty = computed(
 /**
  * The main column renders nothing — every section there is hidden or empty —
  * while the side column still has content, so it needs a placeholder rather
- * than a blank half page.
+ * than a blank half page. A visible readme is main-column content.
  */
 const mainEmpty = computed(
-    () => asVisitor.value && mainSections.value.every((key) => sectionHasContent.value[key] === false),
+    () =>
+        asVisitor.value &&
+        !readmeVisible.value &&
+        mainSections.value.every((key) => sectionHasContent.value[key] === false),
 );
 
 function definitionFor(key: string): ProfileSectionDefinition {
@@ -163,7 +209,7 @@ function sectionLayout(key: string): UserProfileSectionLayout | undefined {
     return layout.value.sections?.[key];
 }
 
-/** Username the owner view was already attempted for; stops retry loops when it errors. */
+/** Identifier the owner view was already attempted for; stops retry loops when it errors. */
 let triedOwnFor: string | null = null;
 
 /** Only the owner detail view carries `published`. */
@@ -180,7 +226,7 @@ async function load() {
     sectionHasContent.value = {};
     const useOwnView = isOwner.value && !!userId.value;
     if (useOwnView) {
-        triedOwnFor = props.username;
+        triedOwnFor = props.identifier;
     }
     try {
         if (useOwnView) {
@@ -191,13 +237,22 @@ async function load() {
     } finally {
         if (seq === loadSeq) {
             loading.value = false;
+            canonicalizeUrl();
             // The user store may have hydrated while the public load was in
             // flight (including a 404 for the owner's unpublished page);
             // switch to the owner view once — never loop when it errors too.
-            if (isOwner.value && userId.value && !hasOwnerView() && triedOwnFor !== props.username) {
+            if (isOwner.value && userId.value && !hasOwnerView() && triedOwnFor !== props.identifier) {
                 load();
             }
         }
+    }
+}
+
+/** An id URL is only ever transient: replace it with the username URL. */
+function canonicalizeUrl() {
+    const username = profile.value?.username;
+    if (username && username !== props.identifier) {
+        router.replace(`/profile/${username}`);
     }
 }
 
@@ -217,12 +272,12 @@ async function loadOwn(seq: number) {
         return;
     }
 
-    profile.value = { ...data, username: data.username ?? props.username };
+    profile.value = { ...data, username: data.username ?? props.identifier };
 }
 
 async function loadPublic(seq: number) {
-    const { data, error } = await GalaxyApi().GET("/api/profiles/{username}", {
-        params: { path: { username: props.username } },
+    const { data, error } = await GalaxyApi().GET("/api/profiles/{user_identifier}", {
+        params: { path: { user_identifier: props.identifier } },
     });
 
     if (seq !== loadSeq) {
@@ -311,18 +366,41 @@ function onSectionLoaded(key: string, hasContent: boolean) {
     set(sectionHasContent.value, key, hasContent);
 }
 
+function onPreview(key: string, item: ProfileListItem) {
+    previewTarget.value = { definition: definitionFor(key), item };
+    previewShown.value = true;
+}
+
 function publishPage() {
     saveFields({ published: true });
 }
 
+/** Persist the picked readme page; reload so the payload's readme_page ref (title, flags) is fresh. */
+async function onReadmeUpdate(pageId: string | null) {
+    const error = await saveFields({ readme_page_id: pageId });
+    if (!error) {
+        load();
+    }
+}
+
 onMounted(load);
 
-watch(() => props.username, load);
+watch(
+    () => props.identifier,
+    (identifier) => {
+        // canonicalizing an id URL to the loaded profile's username fires this
+        // watch too — the data is already correct, don't refetch and flash
+        if (profile.value?.username === identifier) {
+            return;
+        }
+        load();
+    },
+);
 
 // The user store hydrates asynchronously; when the owner is recognized after
 // the initial public load already settled, switch to the owner view.
 watch([isOwner, userId], ([owner, id]) => {
-    if (owner && id && !loading.value && !hasOwnerView() && triedOwnFor !== props.username) {
+    if (owner && id && !loading.value && !hasOwnerView() && triedOwnFor !== props.identifier) {
         load();
     }
 });
@@ -443,6 +521,14 @@ watch([isOwner, userId], ([owner, id]) => {
                 <!-- v-show, not v-if: the cards must mount to fetch and report content,
                  even while the empty-page solo state hides the columns -->
                 <main v-show="!soloIdentity" class="user-profile-content flex-column">
+                    <!-- fixed slot above the draggable sections: the readme is
+                         set/removed, not reordered or eye-toggled -->
+                    <ProfileReadmeCard
+                        v-if="readmeVisible || editing"
+                        :editable="editing"
+                        :readme="profile.readme_page"
+                        @update:readme="onReadmeUpdate" />
+
                     <div
                         v-if="mainEmpty"
                         v-localize
@@ -464,9 +550,10 @@ watch([isOwner, userId], ([owner, id]) => {
                             :editable="editing"
                             :layout="sectionLayout(key)"
                             :max-items="maxSectionItems"
-                            :username="props.username"
+                            :username="resolvedUsername"
                             :visible="sectionVisible(key)"
                             @loaded="onSectionLoaded(key, $event)"
+                            @preview="onPreview(key, $event)"
                             @toggle-visible="onToggleSection(key, $event)"
                             @update:layout="onSectionLayoutUpdate(key, $event)" />
                     </draggable>
@@ -485,10 +572,13 @@ watch([isOwner, userId], ([owner, id]) => {
                                 v-if="key === TOOLS_SECTION_KEY"
                                 :key="key"
                                 :editable="editing"
+                                :layout="sectionLayout(key)"
+                                :max-items="maxStarredTools"
                                 :tools="profile.starred_tools ?? []"
                                 :visible="sectionVisible(key)"
                                 @loaded="onSectionLoaded(key, $event)"
-                                @toggle-visible="onToggleSection(key, $event)" />
+                                @toggle-visible="onToggleSection(key, $event)"
+                                @update:layout="onSectionLayoutUpdate(key, $event)" />
 
                             <ProfileListCard
                                 v-else
@@ -497,15 +587,21 @@ watch([isOwner, userId], ([owner, id]) => {
                                 :editable="editing"
                                 :layout="sectionLayout(key)"
                                 :max-items="maxSectionItems"
-                                :username="props.username"
+                                :username="resolvedUsername"
                                 :visible="sectionVisible(key)"
                                 @loaded="onSectionLoaded(key, $event)"
+                                @preview="onPreview(key, $event)"
                                 @toggle-visible="onToggleSection(key, $event)"
                                 @update:layout="onSectionLayoutUpdate(key, $event)" />
                         </template>
                     </draggable>
                 </aside>
             </div>
+
+            <ProfileItemPreviewModal
+                :definition="previewTarget?.definition"
+                :item="previewTarget?.item"
+                :show.sync="previewShown" />
         </div>
     </div>
 </template>

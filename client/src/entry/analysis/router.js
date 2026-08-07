@@ -747,12 +747,14 @@ export function getRouter(Galaxy) {
                         },
                     },
                     /** Public user profile pages; rendered with the standard
-                     *  activity bar and history panel chrome. */
+                     *  activity bar and history panel chrome. The identifier is
+                     *  a username or an encoded user id (the username-change-proof
+                     *  permalink); the page canonicalizes id URLs to the username. */
                     {
-                        path: "profile/:username",
+                        path: "profile/:identifier",
                         component: UserProfilePage,
                         redirect: redirectIf(!Galaxy.config.enable_user_profile_pages, "/"),
-                        props: (route) => ({ username: route.params.username }),
+                        props: (route) => ({ identifier: route.params.identifier }),
                     },
                     {
                         path: "user/profile-settings",
