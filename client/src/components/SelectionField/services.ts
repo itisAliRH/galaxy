@@ -74,3 +74,23 @@ export async function getHistories() {
     }
     return data;
 }
+
+/** The current user's own pages, newest first. */
+export async function getPages() {
+    const { data, error } = await GalaxyApi().GET("/api/pages", {
+        params: {
+            query: {
+                show_own: true,
+                show_published: false,
+                show_shared: false,
+                sort_by: "update_time",
+                sort_desc: true,
+                limit: LIMIT,
+            },
+        },
+    });
+    if (error) {
+        rethrowSimple(error);
+    }
+    return data.filter((page) => !page.deleted);
+}
