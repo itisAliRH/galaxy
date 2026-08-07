@@ -16,6 +16,7 @@ import { useToast } from "@/composables/toast";
 import { useToolPanelFavorites } from "@/composables/toolPanelFavorites";
 import type { Tool, ToolPanelItem, ToolSection as ToolSectionType } from "@/stores/toolStore";
 import { useToolStore } from "@/stores/toolStore";
+import { favoriteEntryKey, mergeFavoriteOrder, sameFavoriteOrder } from "@/stores/users/favoritesOrder";
 import type { FavoriteOrderEntry } from "@/stores/users/queries";
 import { useUserStore } from "@/stores/userStore";
 import ariaAlert from "@/utils/ariaAlert";
@@ -227,16 +228,8 @@ type FavoriteTopLevelItem = {
     panelItem: Tool | ToolSectionType;
 };
 
-// Convention: favorite ids are stored on the server in raw form (e.g. "Get Data"
-// or an EDAM URI containing a colon). For client-side identity — Vue `:key`
-// values, section ids built with FAVORITE_*_SECTION_PREFIX, and Map lookups
-// — we URI-encode the id so the type:id separator and any ":" inside the id
-// don't collide. DOM `data-favorite-id` attributes use the raw id; only
-// internal lookup keys are encoded.
-function favoriteEntryKey(orderEntry: FavoriteOrderEntry) {
-    return `${orderEntry.object_type}:${encodeURIComponent(orderEntry.object_id)}`;
-}
-
+// DOM `data-favorite-id` attributes use the raw id; only internal lookup keys
+// (favoriteEntryKey) are encoded.
 const visibleFavoriteTopLevelItems = computed<FavoriteTopLevelItem[]>(() => {
     const favoriteItemsByKey = new Map<string, FavoriteTopLevelItem>();
 
@@ -316,47 +309,21 @@ watch(
     { immediate: true },
 );
 
-function mergeFavoriteOrder(updatedVisibleOrder: FavoriteOrderEntry[]) {
-    const visibleKeys = new Set(visibleFavoriteTopLevelItems.value.map((item) => favoriteEntryKey(item.orderEntry)));
-    const reorderedQueue = [...updatedVisibleOrder];
-    const mergedOrder: FavoriteOrderEntry[] = [];
-
-    for (const entry of favoriteOrder.value) {
-        if (visibleKeys.has(favoriteEntryKey(entry))) {
-            const reorderedEntry = reorderedQueue.shift();
-            if (reorderedEntry) {
-                mergedOrder.push(reorderedEntry);
-            }
-        } else {
-            mergedOrder.push(entry);
-        }
-    }
-
-    for (const remainingEntry of reorderedQueue) {
-        mergedOrder.push(remainingEntry);
-    }
-
-    return mergedOrder;
-}
-
 async function onFavoriteDragStart() {
     syncingFavoriteOrder.value = true;
 }
 
 async function onFavoriteDragEnd() {
     const reorderedVisibleOrder = draggableFavoriteItems.value.map((item) => item.orderEntry);
-    const mergedOrder = mergeFavoriteOrder(reorderedVisibleOrder);
-    const sameOrder =
-        mergedOrder.length === favoriteOrder.value.length &&
-        mergedOrder.every(
-            (entry, index) =>
-                entry.object_type === favoriteOrder.value[index]?.object_type &&
-                entry.object_id === favoriteOrder.value[index]?.object_id,
-        );
+    const mergedOrder = mergeFavoriteOrder(
+        favoriteOrder.value,
+        visibleFavoriteTopLevelItems.value.map((item) => item.orderEntry),
+        reorderedVisibleOrder,
+    );
 
     syncingFavoriteOrder.value = false;
 
-    if (sameOrder) {
+    if (sameFavoriteOrder(mergedOrder, favoriteOrder.value)) {
         return;
     }
 
