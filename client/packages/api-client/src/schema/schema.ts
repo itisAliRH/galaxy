@@ -4755,15 +4755,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/profiles/{username}": {
+    "/api/profiles/{user_identifier}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Return the public profile page for a username */
-        get: operations["get_public_user_profile_api_profiles__username__get"];
+        /** Return the public profile page for a username or encoded user id */
+        get: operations["get_public_user_profile_api_profiles__user_identifier__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -21204,6 +21204,74 @@ export interface components {
             model_store_format: components["schemas"]["ModelStoreFormat"];
         };
         /**
+         * ProfileLinkType
+         * @description Link slots on the profile page.
+         *
+         *     The non-``custom`` values are well-known services rendered with a fixed
+         *     icon and position; at most one link of each well-known type is allowed.
+         *     New well-known slots are enum additions — no schema migration needed.
+         * @enum {string}
+         */
+        ProfileLinkType: "gtn" | "hub" | "github" | "custom";
+        /**
+         * ProfileReadmePage
+         * @description Reference to the Page a user selected as their profile readme.
+         */
+        ProfileReadmePage: {
+            /**
+             * Content format
+             * @description Content format of the readme page; only markdown pages can be used as a readme.
+             * @default markdown
+             */
+            content_format: string;
+            /**
+             * Page ID
+             * @description Encoded id of the readme page; its content is fetched via the pages API.
+             * @example 0123456789ABCDEF
+             */
+            id: string;
+            /**
+             * Title
+             * @description Title of the readme page.
+             */
+            title?: string | null;
+        };
+        /**
+         * ProfileReadmePageDetail
+         * @description Owner's view of the readme page reference, including display-blocking state.
+         */
+        ProfileReadmePageDetail: {
+            /**
+             * Content format
+             * @description Content format of the readme page; only markdown pages can be used as a readme.
+             * @default markdown
+             */
+            content_format: string;
+            /**
+             * Deleted
+             * @description Whether the readme page has been deleted; deleted readmes are hidden from the public profile.
+             * @default false
+             */
+            deleted: boolean;
+            /**
+             * Page ID
+             * @description Encoded id of the readme page; its content is fetched via the pages API.
+             * @example 0123456789ABCDEF
+             */
+            id: string;
+            /**
+             * Published
+             * @description Whether the readme page is published; unpublished readmes are hidden from the public profile.
+             * @default false
+             */
+            published: boolean;
+            /**
+             * Title
+             * @description Title of the readme page.
+             */
+            title?: string | null;
+        };
+        /**
          * ProfileStarredTool
          * @description A starred tool shown on the profile page; derived from the user's favorites, never stored on the profile row.
          */
@@ -21224,7 +21292,8 @@ export interface components {
          * @description Public view of a user profile.
          *
          *     Deliberately a separate model from UserProfileDetail: it must never carry
-         *     the user's email, internal id, or unpublished state.
+         *     the user's email, raw internal ids, or unpublished state. The encoded user
+         *     id and the md5 email hash are as public as on any published item.
          */
         PublicUserProfile: {
             /**
@@ -21232,11 +21301,6 @@ export interface components {
              * @description Institutional or organizational affiliation.
              */
             affiliation?: string | null;
-            /**
-             * Avatar seed
-             * @description Seed for the generated avatar; the username is used when unset.
-             */
-            avatar_seed?: string | null;
             /**
              * Description
              * @description Short description shown under the name.
@@ -21248,13 +21312,24 @@ export interface components {
              */
             display_name?: string | null;
             /**
+             * Email hash
+             * @description MD5 hash of the owner's email; may be used to fetch a Gravatar.
+             */
+            email_hash?: string | null;
+            /**
+             * User ID
+             * @description Encoded id of the owner; /profile/{id} is the username-change-proof permalink.
+             * @example 0123456789ABCDEF
+             */
+            id: string;
+            /**
              * Layout
              * @description Section ordering and per-section display settings for the profile page.
              */
             layout?: components["schemas"]["UserProfileLayout"] | null;
             /**
              * Links
-             * @description External links shown on the profile page.
+             * @description External links shown on the profile page; well-known slots first, then custom links.
              */
             links?: components["schemas"]["UserProfileLink"][] | null;
             /**
@@ -21262,6 +21337,11 @@ export interface components {
              * @description The user's ORCID iD, formatted 0000-0000-0000-0000.
              */
             orcid?: string | null;
+            /**
+             * Readme page
+             * @description The readme page reference; only present when it is publicly displayable.
+             */
+            readme_page?: components["schemas"]["ProfileReadmePage"] | null;
             /**
              * Research interests
              * @description Longer-form description of research interests.
@@ -26306,11 +26386,6 @@ export interface components {
              */
             affiliation?: string | null;
             /**
-             * Avatar seed
-             * @description Seed for the generated avatar; the username is used when unset.
-             */
-            avatar_seed?: string | null;
-            /**
              * Description
              * @description Short description shown under the name.
              */
@@ -26321,13 +26396,23 @@ export interface components {
              */
             display_name?: string | null;
             /**
+             * Email hash
+             * @description MD5 hash of the owner's email; may be used to fetch a Gravatar.
+             */
+            email_hash?: string | null;
+            /**
+             * User ID
+             * @description Encoded id of the owner; /profile/{id} is the username-change-proof permalink.
+             */
+            id?: string | null;
+            /**
              * Layout
              * @description Section ordering and per-section display settings for the profile page.
              */
             layout?: components["schemas"]["UserProfileLayout"] | null;
             /**
              * Links
-             * @description External links shown on the profile page.
+             * @description External links shown on the profile page; well-known slots first, then custom links.
              */
             links?: components["schemas"]["UserProfileLink"][] | null;
             /**
@@ -26341,6 +26426,11 @@ export interface components {
              * @default false
              */
             published: boolean;
+            /**
+             * Readme page
+             * @description The owner's selected readme page, including state that blocks public display.
+             */
+            readme_page?: components["schemas"]["ProfileReadmePageDetail"] | null;
             /**
              * Research interests
              * @description Longer-form description of research interests.
@@ -26382,10 +26472,11 @@ export interface components {
         /** UserProfileLink */
         UserProfileLink: {
             /**
-             * Label
-             * @description Display label for the link.
+             * Link type
+             * @description Well-known service slot (gtn, hub, github) or a custom link.
+             * @default custom
              */
-            label: string;
+            type: components["schemas"]["ProfileLinkType"];
             /**
              * URL
              * @description The link target; must be an http(s) URL.
@@ -26418,11 +26509,6 @@ export interface components {
              */
             affiliation?: string | null;
             /**
-             * Avatar seed
-             * @description Seed for the generated avatar; the username is used when unset.
-             */
-            avatar_seed?: string | null;
-            /**
              * Description
              * @description Short description shown under the name.
              */
@@ -26439,7 +26525,7 @@ export interface components {
             layout?: components["schemas"]["UserProfileLayout"] | null;
             /**
              * Links
-             * @description External links shown on the profile page.
+             * @description External links shown on the profile page; well-known slots first, then custom links.
              */
             links?: components["schemas"]["UserProfileLink"][] | null;
             /**
@@ -26453,6 +26539,11 @@ export interface components {
              * @default false
              */
             published: boolean;
+            /**
+             * Readme page ID
+             * @description Id of one of the owner's markdown pages to render as the profile readme; null clears it.
+             */
+            readme_page_id?: string | null;
             /**
              * Research interests
              * @description Longer-form description of research interests.
@@ -47048,7 +47139,7 @@ export interface operations {
             };
         };
     };
-    get_public_user_profile_api_profiles__username__get: {
+    get_public_user_profile_api_profiles__user_identifier__get: {
         parameters: {
             query?: never;
             header?: {
@@ -47056,8 +47147,8 @@ export interface operations {
                 "run-as"?: string | null;
             };
             path: {
-                /** @description The public username of the profile owner. */
-                username: string;
+                /** @description The public username or encoded user id of the profile owner. */
+                user_identifier: string;
             };
             cookie?: never;
         };
