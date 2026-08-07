@@ -6,6 +6,7 @@ import { useConfig } from "@/composables/config";
 import type { PublishedItem } from "./models/PublishedItem";
 
 import ActivityBar from "@/components/ActivityBar/ActivityBar.vue";
+import UserAvatar from "@/components/Common/UserAvatar.vue";
 import LoadingSpan from "@/components/LoadingSpan.vue";
 import FlexPanel from "@/components/Panels/FlexPanel.vue";
 import StatelessTags from "@/components/TagsMultiselect/StatelessTags.vue";
@@ -49,7 +50,6 @@ const authorProfileUrl = computed(() => {
     return username ? `/profile/${username}` : null;
 });
 
-const gravatarSource = computed(() => `https://secure.gravatar.com/avatar/${props.item?.email_hash}?d=identicon`);
 const pluralPath = computed(() => props.overridePath ?? plural.value.toLowerCase());
 const publishedByUser = computed(() => `/${pluralPath.value}/list_published?f-username=${owner.value}`);
 const urlAll = computed(() => `/${pluralPath.value}/list_published`);
@@ -69,7 +69,7 @@ const urlAll = computed(() => `/${pluralPath.value}/list_published`);
 
                 <h2 class="h-md text-break">{{ props.item?.title ?? props.item?.name }}</h2>
 
-                <img :src="gravatarSource" alt="user avatar" />
+                <UserAvatar :email-hash="props.item?.email_hash" :alt="owner" :size="80" />
 
                 <StatelessTags v-if="props.item?.tags" class="tags mt-2" :value="props.item.tags" disabled />
 

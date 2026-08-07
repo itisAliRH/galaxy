@@ -10,6 +10,7 @@ import { useConfig } from "@/composables/config";
 import { useUserStore } from "@/stores/userStore";
 
 import Heading from "@/components/Common/Heading.vue";
+import UserAvatar from "@/components/Common/UserAvatar.vue";
 import CopyToClipboard from "@/components/CopyToClipboard.vue";
 import License from "@/components/License/License.vue";
 import StatelessTags from "@/components/TagsMultiselect/StatelessTags.vue";
@@ -25,10 +26,6 @@ const props = defineProps<Props>();
 const userStore = useUserStore();
 
 const { config, isConfigLoaded } = useConfig(true);
-
-const gravatarSource = computed(
-    () => `https://secure.gravatar.com/avatar/${props.workflowInfo?.email_hash}?d=identicon`,
-);
 
 const publishedByUser = computed(() => `/workflows/list_published?owner=${props.workflowInfo?.owner}`);
 
@@ -87,7 +84,7 @@ function hasDoi() {
                 </span>
             </hgroup>
 
-            <img alt="User Avatar" :src="gravatarSource" class="mb-2" />
+            <UserAvatar :email-hash="props.workflowInfo?.email_hash" :alt="owner" :size="80" class="mb-2" />
 
             <RouterLink
                 v-if="!props.workflowInfo?.creator_deleted"
