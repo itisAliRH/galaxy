@@ -12554,7 +12554,7 @@ class UserProfile(Base, RepresentById):
     affiliation: Mapped[str | None] = mapped_column(Unicode(255))
     research_interests: Mapped[str | None] = mapped_column(Text)
     orcid: Mapped[str | None] = mapped_column(Unicode(19))
-    avatar_seed: Mapped[str | None] = mapped_column(Unicode(255))
+    readme_page_id: Mapped[int | None] = mapped_column(ForeignKey("page.id", ondelete="SET NULL"), index=True)
     links: Mapped[list | None] = mapped_column(MutableJSONType)
     visible_sections: Mapped[dict | None] = mapped_column(MutableJSONType)
     layout: Mapped[dict | None] = mapped_column(MutableJSONType)
@@ -12562,6 +12562,7 @@ class UserProfile(Base, RepresentById):
     update_time: Mapped[datetime] = mapped_column(default=now, onupdate=now, nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="profile")
+    readme_page: Mapped[Optional["Page"]] = relationship("Page", foreign_keys=[readme_page_id])
 
 
 class UsesTemplatesAppConfig(Protocol):
