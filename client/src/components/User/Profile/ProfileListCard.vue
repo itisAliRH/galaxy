@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { faGripLines, faThumbtack } from "@fortawesome/free-solid-svg-icons";
+import { faEye, faGripLines, faThumbtack } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { computed, onMounted, ref } from "vue";
 import draggable from "vuedraggable";
@@ -61,6 +61,7 @@ const emit = defineEmits<{
     (e: "loaded", hasContent: boolean): void;
     (e: "toggle-visible", value: boolean): void;
     (e: "update:layout", value: SectionLayout): void;
+    (e: "preview", item: ProfileListItem): void;
 }>();
 
 const loading = ref(true);
@@ -242,6 +243,17 @@ onMounted(load);
                         </span>
                     </router-link>
 
+                    <GButton
+                        v-if="props.definition.preview"
+                        class="profile-list-preview"
+                        color="grey"
+                        size="small"
+                        transparent
+                        title="Preview"
+                        @click="emit('preview', item)">
+                        <FontAwesomeIcon :icon="faEye" fixed-width />
+                    </GButton>
+
                     <FontAwesomeIcon
                         v-if="!props.editable && isPinned(item)"
                         class="profile-list-pin-marker"
@@ -359,6 +371,26 @@ onMounted(load);
 
     .profile-list-pin-marker {
         opacity: 0.5;
+    }
+
+    .profile-list-preview {
+        background: none;
+        color: inherit;
+        opacity: 0;
+
+        &:focus-visible {
+            opacity: 1;
+        }
+    }
+
+    .profile-list-item:hover .profile-list-preview,
+    .profile-list-item:focus-within .profile-list-preview {
+        opacity: 0.5;
+
+        &:hover,
+        &:focus-visible {
+            opacity: 1;
+        }
     }
 
     .profile-list-pin {

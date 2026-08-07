@@ -8,6 +8,7 @@
  */
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import { faChartBar, faFile, faHdd, faSitemap, faWrench } from "@fortawesome/free-solid-svg-icons";
+import type { Component } from "vue";
 
 import { GalaxyApi } from "@/api";
 import { getPublishedHistories } from "@/api/histories";
@@ -47,6 +48,16 @@ export interface ProfileListItem {
 /** How many tags a row shows before the rest are dropped. */
 export const MAX_VISIBLE_TAGS = 3;
 
+export interface ProfileSectionPreview {
+    /**
+     * Lazily imported component rendered inside the preview modal, so
+     * sections.ts never pulls the heavy viewer bundles eagerly.
+     */
+    component: () => Promise<Component | { default: Component }>;
+    /** Props to bind onto the preview component for an item. */
+    props: (item: ProfileListItem) => Record<string, unknown>;
+}
+
 export interface ProfileSectionDefinition {
     key: string;
     label: string;
@@ -62,6 +73,8 @@ export interface ProfileSectionDefinition {
     listUrl: (username: string) => string;
     /** Fetch the user's published items, newest first. */
     fetch: (username: string) => Promise<{ items: ProfileListItem[]; total: number }>;
+    /** In-place preview support; sections without it simply show no preview button. */
+    preview?: ProfileSectionPreview;
 }
 
 async function fetchHistories(username: string) {
@@ -176,6 +189,10 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
         itemUrl: (item) => `/published/history?id=${item.id}`,
         listUrl: (username) => `/histories/list_published?f-username=${username}`,
         fetch: fetchHistories,
+        preview: {
+            component: () => import("@/components/History/HistoryView.vue"),
+            props: (item) => ({ id: item.id, showHeading: false }),
+        },
     },
     {
         key: "workflows",
@@ -186,6 +203,10 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
         itemUrl: (item) => `/published/workflow?id=${item.id}`,
         listUrl: (username) => `/workflows/list_published?owner=${username}`,
         fetch: fetchWorkflows,
+        preview: {
+            component: () => import("@/components/Workflow/Published/WorkflowPublished.vue"),
+            props: (item) => ({ id: item.id, quickView: true, showHeading: false, showButtons: false }),
+        },
     },
     {
         key: "pages",
@@ -196,7 +217,13 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
         itemUrl: (item) => `/published/page?id=${item.id}`,
         listUrl: (username) => `/pages/list_published?f-username=${username}`,
         fetch: fetchPages,
+        preview: {
+            component: () => import("@/components/Page/PageView.vue"),
+            props: (item) => ({ pageId: item.id, embed: true, showHeading: false }),
+        },
     },
+    // visualizations deliberately have no preview: plugin iframes assume full
+    // center-panel sizing and need their own sizing/security pass first
     {
         key: "visualizations",
         label: "Published visualizations",

@@ -1,6 +1,6 @@
 <template>
     <div v-if="currentUser && history" class="d-flex flex-column h-100">
-        <BreadcrumbHeading :items="breadcrumbItems">
+        <BreadcrumbHeading v-if="showHeading" :items="breadcrumbItems">
             <div class="d-flex flex-gapx-1">
                 <GButton
                     v-if="userOwnsHistory"
@@ -72,6 +72,11 @@ export default {
         id: {
             type: String,
             required: true,
+        },
+        /** Hide the breadcrumb heading, e.g. when embedded in a preview modal. */
+        showHeading: {
+            type: Boolean,
+            default: true,
         },
     },
     data() {
