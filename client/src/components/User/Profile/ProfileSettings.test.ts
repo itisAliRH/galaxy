@@ -33,8 +33,7 @@ interface ProfilePayload {
     affiliation: string | null;
     research_interests: string | null;
     orcid: string | null;
-    avatar_seed: string | null;
-    links: { label: string; url: string }[] | null;
+    links: { type: string; url: string }[] | null;
     visible_sections: Record<string, boolean> | null;
     username: string | null;
 }
@@ -47,7 +46,6 @@ function profileResponse(overrides: Partial<ProfilePayload> = {}): ProfilePayloa
         affiliation: null,
         research_interests: null,
         orcid: null,
-        avatar_seed: null,
         links: null,
         visible_sections: null,
         username: TEST_USERNAME,

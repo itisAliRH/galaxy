@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { faBuilding, faDice, faExternalLinkAlt, faEye, faEyeSlash, faUndo } from "@fortawesome/free-solid-svg-icons";
+import { faBuilding, faExternalLinkAlt, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { BFormGroup, BFormInput, BFormTextarea } from "bootstrap-vue";
 import { computed, ref } from "vue";
@@ -8,9 +8,9 @@ import type { components } from "@/api/schema";
 import { useUid } from "@/composables/utils/uid";
 import { ORCID_FORMAT, orcidUrl, validateOrcid } from "@/utils/orcid";
 
-import ProfileAvatar from "./ProfileAvatar.vue";
 import ProfileLinksEditor from "./ProfileLinksEditor.vue";
 import GButton from "@/components/BaseComponents/GButton.vue";
+import UserAvatar from "@/components/Common/UserAvatar.vue";
 
 type PublicUserProfile = components["schemas"]["PublicUserProfile"];
 type UserProfileLink = components["schemas"]["UserProfileLink"];
@@ -101,49 +101,20 @@ async function onOrcidInput(value: string) {
 function onLinksUpdate(value: UserProfileLink[]) {
     saveField({ links: value });
 }
-
-/** Shuffle the generated avatar; the seed persists so every visitor sees the same one. */
-function randomizeAvatar() {
-    saveField({ avatar_seed: crypto.randomUUID() });
-}
-
-function resetAvatar() {
-    saveField({ avatar_seed: null });
-}
 </script>
 
 <template>
     <div class="profile-identity d-flex flex-column">
-        <div class="profile-identity-avatar position-relative align-self-center">
-            <ProfileAvatar
-                :username="props.profile.username"
-                :seed="props.profile.avatar_seed ?? undefined"
-                :size="180" />
+        <div class="profile-identity-avatar align-self-center">
+            <UserAvatar :email-hash="props.profile.email_hash" :alt="props.profile.username" :size="180" />
+        </div>
 
-            <div v-if="props.editable" class="profile-identity-avatar-actions position-absolute d-flex flex-gapx-1">
-                <GButton
-                    class="border-0 rounded-circle"
-                    color="grey"
-                    size="large"
-                    icon-only
-                    title="Shuffle avatar"
-                    aria-label="Shuffle avatar"
-                    @click="randomizeAvatar">
-                    <FontAwesomeIcon :icon="faDice" fixed-width />
-                </GButton>
-
-                <GButton
-                    v-if="props.profile.avatar_seed"
-                    class="border-0 rounded-circle"
-                    color="grey"
-                    size="large"
-                    icon-only
-                    title="Reset avatar to default"
-                    aria-label="Reset avatar to default"
-                    @click="resetAvatar">
-                    <FontAwesomeIcon :icon="faUndo" fixed-width />
-                </GButton>
-            </div>
+        <div v-if="props.editable" class="profile-identity-avatar-hint text-center">
+            <span v-localize>Your picture comes from</span>
+            <a href="https://gravatar.com" rel="noopener noreferrer" target="_blank">
+                Gravatar
+                <FontAwesomeIcon class="profile-identity-external" :icon="faExternalLinkAlt" size="xs" />
+            </a>
         </div>
 
         <!-- Edit mode is a plain form: every field is an input from the start,
@@ -297,22 +268,9 @@ function resetAvatar() {
 .profile-identity {
     gap: 0.5rem;
 
-    .profile-identity-avatar {
-        .profile-identity-avatar-actions {
-            // Pins the overlay to the avatar's lower-right corner.
-            right: 0.5rem;
-            bottom: 0.5rem;
-
-            // The disc floating over the avatar is not a GButton variant, so
-            // its fill and lift stay local. The lift is a `drop-shadow` filter
-            // rather than a `box-shadow`: GButton draws its focus ring with
-            // `box-shadow`, and a local one here would outrank and erase it.
-            .g-button {
-                background-color: rgba(255, 255, 255, 0.9);
-                color: var(--color-galaxy-dark);
-                filter: drop-shadow(0 1px 1.5px rgba(44, 49, 67, 0.3));
-            }
-        }
+    .profile-identity-avatar-hint {
+        font-size: 0.8rem;
+        opacity: 0.75;
     }
 
     .profile-identity-name {
