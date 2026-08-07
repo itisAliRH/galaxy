@@ -1,11 +1,19 @@
 <script setup lang="ts">
-import { faBookOpen, faExchangeAlt, faPlus, faTimes } from "@fortawesome/free-solid-svg-icons";
+import {
+    faBookOpen,
+    faExchangeAlt,
+    faExternalLinkAlt,
+    faPencilAlt,
+    faPlus,
+    faTimes,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import type { components } from "@/api/schema";
 import type { SelectionItem } from "@/components/SelectionDialog/selectionTypes";
 import { getPages } from "@/components/SelectionField/services";
+import { withPrefix } from "@/utils/redirect";
 
 import GButton from "@/components/BaseComponents/GButton.vue";
 import PageView from "@/components/Page/PageView.vue";
@@ -39,6 +47,9 @@ const emit = defineEmits<{
 }>();
 
 const showPicker = ref(false);
+
+/** Page editor for the selected readme; opened in a new tab so the profile stays put. */
+const editPageUrl = computed(() => (props.readme ? withPrefix(`/pages/editor?id=${props.readme.id}`) : null));
 
 function readmeBlocked(readme: ProfileReadmePage | ProfileReadmePageDetail): string | null {
     if (!("published" in readme)) {
@@ -74,6 +85,21 @@ function onPicked(selection: SelectionItem) {
 
                 <template v-if="props.editable">
                     <GButton
+                        v-if="editPageUrl"
+                        color="grey"
+                        size="small"
+                        transparent
+                        title="Edit this page in a new tab"
+                        data-description="edit readme page"
+                        :href="editPageUrl"
+                        rel="noopener"
+                        target="_blank">
+                        <FontAwesomeIcon :icon="faPencilAlt" fixed-width />
+                        <span v-localize>Edit</span>
+                        <FontAwesomeIcon class="profile-readme-external" :icon="faExternalLinkAlt" size="xs" />
+                    </GButton>
+
+                    <GButton
                         color="grey"
                         size="small"
                         transparent
@@ -101,11 +127,13 @@ function onPicked(selection: SelectionItem) {
                 {{ readmeBlocked(props.readme) }}
             </div>
 
+            <!-- content only: the card header already names the page -->
             <PageView
                 :key="props.readme.id"
                 class="profile-readme-body"
                 embed
                 :page-id="props.readme.id"
+                :show-footer="false"
                 :show-heading="false" />
         </div>
 
@@ -153,6 +181,10 @@ function onPicked(selection: SelectionItem) {
                 font-weight: 400;
             }
         }
+    }
+
+    .profile-readme-external {
+        opacity: 0.6;
     }
 
     .profile-readme-blocked {

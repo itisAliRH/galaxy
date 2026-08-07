@@ -30,12 +30,15 @@ interface Props {
     embed?: boolean;
     showHeading?: boolean;
     displayOnly?: boolean;
+    /** Hide the update-time / identifier footer under the rendered content. */
+    showFooter?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     embed: false,
     showHeading: true,
     displayOnly: false,
+    showFooter: true,
 });
 
 const router = useRouter();
@@ -133,6 +136,8 @@ function stsUrl(config: any) {
                         v-if="page.content_format === 'markdown'"
                         :markdown-config="page"
                         :download-endpoint="stsUrl(config)"
+                        :no-footer="!props.showFooter"
+                        :no-heading="!props.showHeading"
                         :read-only="true"
                         class="page-markdown" />
                     <PageHtml v-else :page="page" />

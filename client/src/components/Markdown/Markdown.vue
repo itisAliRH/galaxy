@@ -21,6 +21,8 @@ const props = defineProps<{
     showIdentifier?: boolean;
     directDownloadLink?: boolean;
     noHeading?: boolean;
+    /** Hide the update-time / identifier footer, e.g. for content-only embeds. */
+    noFooter?: boolean;
     editButtonConfig?: { tooltip?: string; icon?: IconDefinition; label: string; disabled?: boolean };
 }>();
 
@@ -144,7 +146,7 @@ onMounted(() => {
                 </div>
                 <div class="markdown-scroll-overlay" />
             </div>
-            <div class="d-flex justify-content-between p-1">
+            <div v-if="!props.noFooter" class="d-flex justify-content-between p-1">
                 <small v-if="updateTime" class="text-break">Last updated on {{ updateTime }}</small>
                 <small class="text-break">Identifier: {{ markdownConfig.id }}</small>
             </div>

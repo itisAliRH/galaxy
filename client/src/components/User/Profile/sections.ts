@@ -219,7 +219,8 @@ export const PROFILE_SECTIONS: ProfileSectionDefinition[] = [
         fetch: fetchPages,
         preview: {
             component: () => import("@/components/Page/PageView.vue"),
-            props: (item) => ({ pageId: item.id, embed: true, showHeading: false }),
+            // content only: the modal header already names the page
+            props: (item) => ({ pageId: item.id, embed: true, showHeading: false, showFooter: false }),
         },
     },
     // visualizations deliberately have no preview: plugin iframes assume full

@@ -373,18 +373,10 @@ onMounted(load);
         opacity: 0.5;
     }
 
+    // always visible so the affordance is discoverable; hover only lifts it
     .profile-list-preview {
         background: none;
         color: inherit;
-        opacity: 0;
-
-        &:focus-visible {
-            opacity: 1;
-        }
-    }
-
-    .profile-list-item:hover .profile-list-preview,
-    .profile-list-item:focus-within .profile-list-preview {
         opacity: 0.5;
 
         &:hover,
