@@ -526,12 +526,25 @@ def _validate_orcid(value: str | None) -> str | None:
     return value
 
 
+class ProfileLinkType(str, Enum):
+    """Link slots on the profile page.
+
+    The non-``custom`` values are well-known services rendered with a fixed
+    icon and position; at most one link of each well-known type is allowed.
+    New well-known slots are enum additions — no schema migration needed.
+    """
+
+    gtn = "gtn"
+    hub = "hub"
+    github = "github"
+    custom = "custom"
+
+
 class UserProfileLink(Model):
-    label: str = Field(
-        default=...,
-        title="Label",
-        description="Display label for the link.",
-        max_length=64,
+    type: ProfileLinkType = Field(
+        default=ProfileLinkType.custom,
+        title="Link type",
+        description="Well-known service slot (gtn, hub, github) or a custom link.",
     )
     url: str = Field(
         default=...,
@@ -606,16 +619,10 @@ class UserProfileBase(Model):
         title="ORCID iD",
         description="The user's ORCID iD, formatted 0000-0000-0000-0000.",
     )
-    avatar_seed: str | None = Field(
-        default=None,
-        title="Avatar seed",
-        description="Seed for the generated avatar; the username is used when unset.",
-        max_length=255,
-    )
     links: list[UserProfileLink] | None = Field(
         default=None,
         title="Links",
-        description="External links shown on the profile page.",
+        description="External links shown on the profile page; well-known slots first, then custom links.",
     )
     visible_sections: dict[ProfileSectionKey, bool] | None = Field(
         default=None,
@@ -627,6 +634,59 @@ class UserProfileBase(Model):
         default=None,
         title="Layout",
         description="Section ordering and per-section display settings for the profile page.",
+    )
+
+    @field_validator("links")
+    @classmethod
+    def check_links(cls, value: list[UserProfileLink] | None) -> list[UserProfileLink] | None:
+        if not value:
+            return value
+        seen_types: set[ProfileLinkType] = set()
+        for link in value:
+            # use_enum_values on the base Model stores the raw string
+            link_type = ProfileLinkType(link.type)
+            if link_type is ProfileLinkType.custom:
+                continue
+            if link_type in seen_types:
+                raise ValueError(f"Only one {link_type.value} link is allowed.")
+            seen_types.add(link_type)
+            if not link.url.startswith("https://"):
+                raise ValueError(f"The {link_type.value} link must use https.")
+        return value
+
+
+class ProfileReadmePage(Model):
+    """Reference to the Page a user selected as their profile readme."""
+
+    id: EncodedDatabaseIdField = Field(
+        default=...,
+        title="Page ID",
+        description="Encoded id of the readme page; its content is fetched via the pages API.",
+    )
+    title: str | None = Field(
+        default=None,
+        title="Title",
+        description="Title of the readme page.",
+    )
+    content_format: str = Field(
+        default="markdown",
+        title="Content format",
+        description="Content format of the readme page; only markdown pages can be used as a readme.",
+    )
+
+
+class ProfileReadmePageDetail(ProfileReadmePage):
+    """Owner's view of the readme page reference, including display-blocking state."""
+
+    published: bool = Field(
+        default=False,
+        title="Published",
+        description="Whether the readme page is published; unpublished readmes are hidden from the public profile.",
+    )
+    deleted: bool = Field(
+        default=False,
+        title="Deleted",
+        description="Whether the readme page has been deleted; deleted readmes are hidden from the public profile.",
     )
 
 
@@ -651,6 +711,11 @@ class UserProfileUpdatePayload(UserProfileBase):
         title="Published",
         description="Whether the profile page is publicly visible. Fields left unset are not modified.",
     )
+    readme_page_id: DecodedDatabaseIdField | None = Field(
+        default=None,
+        title="Readme page ID",
+        description="Id of one of the owner's markdown pages to render as the profile readme; null clears it.",
+    )
 
     @field_validator("orcid")
     @classmethod
@@ -659,6 +724,11 @@ class UserProfileUpdatePayload(UserProfileBase):
 
 
 class UserProfileDetail(UserProfileBase):
+    id: EncodedDatabaseIdField | None = Field(
+        default=None,
+        title="User ID",
+        description="Encoded id of the owner; /profile/{id} is the username-change-proof permalink.",
+    )
     published: bool = Field(
         default=False,
         title="Published",
@@ -668,6 +738,16 @@ class UserProfileDetail(UserProfileBase):
         default=None,
         title="Username",
         description="The owner's public name; determines the profile page URL.",
+    )
+    email_hash: str | None = Field(
+        default=None,
+        title="Email hash",
+        description="MD5 hash of the owner's email; may be used to fetch a Gravatar.",
+    )
+    readme_page: ProfileReadmePageDetail | None = Field(
+        default=None,
+        title="Readme page",
+        description="The owner's selected readme page, including state that blocks public display.",
     )
     starred_tools: list[ProfileStarredTool] | None = Field(
         default=None,
@@ -680,13 +760,29 @@ class PublicUserProfile(UserProfileBase):
     """Public view of a user profile.
 
     Deliberately a separate model from UserProfileDetail: it must never carry
-    the user's email, internal id, or unpublished state.
+    the user's email, raw internal ids, or unpublished state. The encoded user
+    id and the md5 email hash are as public as on any published item.
     """
 
+    id: EncodedDatabaseIdField = Field(
+        default=...,
+        title="User ID",
+        description="Encoded id of the owner; /profile/{id} is the username-change-proof permalink.",
+    )
     username: str = Field(
         default=...,
         title="Username",
         description="The owner's public name.",
+    )
+    email_hash: str | None = Field(
+        default=None,
+        title="Email hash",
+        description="MD5 hash of the owner's email; may be used to fetch a Gravatar.",
+    )
+    readme_page: ProfileReadmePage | None = Field(
+        default=None,
+        title="Readme page",
+        description="The readme page reference; only present when it is publicly displayable.",
     )
     starred_tools: list[ProfileStarredTool] | None = Field(
         default=None,
