@@ -1,10 +1,24 @@
+import createClient from "openapi-fetch";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MessageException } from "@/api";
-import { GalaxyApi } from "@/api/client";
 import { useServerMock } from "@/api/client/__mocks__";
+import { pendingRequestsMiddleware } from "@/api/client/pendingRequestsMiddleware";
+import type { GalaxyApiPaths } from "@/api/schema";
 
-import { DEFAULT_CONFIG } from "./rateLimiter";
+import { createRateLimiterMiddleware, DEFAULT_CONFIG } from "./rateLimiter";
+
+/**
+ * The shared GalaxyApi client runs without the rate limiter under test, so
+ * the middleware is exercised through a dedicated client mirroring the
+ * production middleware stack.
+ */
+function rateLimitedClient() {
+    const client = createClient<GalaxyApiPaths>({ baseUrl: window.location.origin });
+    client.use(pendingRequestsMiddleware);
+    client.use(createRateLimiterMiddleware());
+    return client;
+}
 
 const { server, http } = useServerMock();
 
@@ -49,7 +63,7 @@ describe("Rate Limiter Middleware", () => {
             }),
         );
 
-        const { error, response } = await GalaxyApi().GET("/api/histories/{history_id}", {
+        const { error, response } = await rateLimitedClient().GET("/api/histories/{history_id}", {
             params: {
                 path: { history_id: "test" },
             },
@@ -86,7 +100,7 @@ describe("Rate Limiter Middleware", () => {
             }),
         );
 
-        const { error, response } = await GalaxyApi().POST("/api/chat", {
+        const { error, response } = await rateLimitedClient().POST("/api/chat", {
             params: {
                 query: { job_id: "test" },
             },
@@ -108,7 +122,7 @@ describe("Rate Limiter Middleware", () => {
             }),
         );
 
-        const { error, response } = await GalaxyApi().DELETE("/api/datasets/{dataset_id}", {
+        const { error, response } = await rateLimitedClient().DELETE("/api/datasets/{dataset_id}", {
             params: {
                 path: { dataset_id: "test_id" },
                 query: { purge: true },
@@ -127,7 +141,7 @@ describe("Rate Limiter Middleware", () => {
             }),
         );
 
-        const { error, response } = await GalaxyApi().PUT("/api/datasets/{dataset_id}", {
+        const { error, response } = await rateLimitedClient().PUT("/api/datasets/{dataset_id}", {
             params: {
                 path: { dataset_id: "test_id" },
             },

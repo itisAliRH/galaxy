@@ -16,15 +16,22 @@ function apiClientFactory() {
     // Registered first so aborted requests bypass the rate-limiter queue.
     client.use(pendingRequestsMiddleware);
 
-    // TODO: Adjust based on server limits (maybe this goes in Galaxy config?)
-    client.use(
-        createRateLimiterMiddleware({
-            maxRequests: 100,
-            windowMs: 3000,
-            retryDelay: 1000,
-            maxRetries: 3,
-        }),
-    );
+    // The client is a module singleton, so in unit tests every mocked request
+    // of a test file shares one rate-limit window; once a request-heavy file
+    // exceeds the budget the queue delay silently stalls the remaining tests.
+    // The limiter therefore stays off under test; its own behavior is covered
+    // directly in rateLimiter.test.ts.
+    if (process.env.NODE_ENV !== "test") {
+        // TODO: Adjust based on server limits (maybe this goes in Galaxy config?)
+        client.use(
+            createRateLimiterMiddleware({
+                maxRequests: 100,
+                windowMs: 3000,
+                retryDelay: 1000,
+                maxRetries: 3,
+            }),
+        );
+    }
 
     return client;
 }
