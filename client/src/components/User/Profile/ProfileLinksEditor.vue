@@ -1,39 +1,25 @@
 <script setup lang="ts">
-import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
-import {
-    faGithub,
-    faGitlab,
-    faLinkedin,
-    faMastodon,
-    faOrcid,
-    faTwitter,
-    faYoutube,
-} from "@fortawesome/free-brands-svg-icons";
-import { faExternalLinkAlt, faGlobe, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faExternalLinkAlt, faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { BFormInput } from "bootstrap-vue";
+import { BFormGroup, BFormInput } from "bootstrap-vue";
 import { computed, ref, watch } from "vue";
 
-import type { components } from "@/api/schema";
+import { useUid } from "@/composables/utils/uid";
+
+import {
+    isUsableLinkUrl,
+    profileLinkIcon,
+    profileLinkText,
+    type UserProfileLink,
+    WELL_KNOWN_LINKS,
+    type WellKnownLinkType,
+} from "./profileLinks";
 
 import GButton from "@/components/BaseComponents/GButton.vue";
 
-type UserProfileLink = components["schemas"]["UserProfileLink"];
-
-/** Known services get their brand icon; everything else falls back to a globe. */
-const BRAND_ICONS: [RegExp, IconDefinition][] = [
-    [/(^|\.)github\.com$/, faGithub],
-    [/(^|\.)gitlab\.com$/, faGitlab],
-    [/(^|\.)linkedin\.com$/, faLinkedin],
-    [/(^|\.)orcid\.org$/, faOrcid],
-    [/(^|\.)(twitter|x)\.com$/, faTwitter],
-    [/(^|\.)(youtube\.com|youtu\.be)$/, faYoutube],
-    [/(^|\.)mastodon\./, faMastodon],
-];
-
 interface Props {
     /**
-     * Whether the owner is viewing: renders every link as an editable row
+     * Whether the owner is viewing: renders the fixed slots and custom rows as inputs
      * @default false
      */
     editable?: boolean;
@@ -59,135 +45,163 @@ const emit = defineEmits<{
     (e: "update:links", value: UserProfileLink[]): void;
 }>();
 
-/**
- * Editable rows, including the half-typed ones. Only rows with a usable URL
- * are emitted, so a row being typed into never truncates the saved list.
- */
-const rows = ref<UserProfileLink[]>(props.links.map((link) => ({ ...link })));
+const slotUid = useUid("profile-link-slot-");
+
+/** URL per fixed slot; empty string when the user has not provided one. */
+const wellKnown = ref<Record<WellKnownLinkType, string>>({ gtn: "", hub: "", github: "" });
+
+/** Custom rows, including half-typed ones; only usable URLs are emitted. */
+const customRows = ref<{ url: string }[]>([]);
+
+function adopt(links: UserProfileLink[]) {
+    const slots: Record<WellKnownLinkType, string> = { gtn: "", hub: "", github: "" };
+    const customs: { url: string }[] = [];
+    for (const link of links) {
+        if (link.type && link.type !== "custom") {
+            slots[link.type] = link.url;
+        } else {
+            customs.push({ url: link.url });
+        }
+    }
+    wellKnown.value = slots;
+    customRows.value = customs;
+}
+
+adopt(props.links);
 
 watch(
     () => props.links,
     (links) => {
         // ignore the echo of our own emit; adopt anything else (load, cancel)
-        if (JSON.stringify(links) !== JSON.stringify(validRows())) {
-            rows.value = links.map((link) => ({ ...link }));
+        if (JSON.stringify(links) !== JSON.stringify(validLinks())) {
+            adopt(links);
         }
     },
 );
 
-const canAdd = computed(() => rows.value.length < props.maxLinks);
+const totalLinks = computed(
+    () => WELL_KNOWN_LINKS.filter((slot) => wellKnown.value[slot.type].trim()).length + customRows.value.length,
+);
+const canAdd = computed(() => totalLinks.value < props.maxLinks);
 
-function hostname(url: string) {
-    try {
-        return new URL(url).hostname.replace(/^www\./, "");
-    } catch {
-        return url;
-    }
-}
-
-function isUsable(link: UserProfileLink) {
-    return /^https?:\/\/.+/.test(link.url.trim());
-}
-
-function validRows(): UserProfileLink[] {
-    return rows.value
-        .filter(isUsable)
-        .map((link) => ({ url: link.url.trim(), label: link.label.trim() || hostname(link.url.trim()) }));
-}
-
-function linkIcon(link: UserProfileLink): IconDefinition {
-    const host = hostname(link.url);
-    for (const [pattern, icon] of BRAND_ICONS) {
-        if (pattern.test(host)) {
-            return icon;
+/** Canonical order: the fixed slots first (gtn, hub, github), customs after. */
+function validLinks(): UserProfileLink[] {
+    const links: UserProfileLink[] = [];
+    for (const slot of WELL_KNOWN_LINKS) {
+        const url = wellKnown.value[slot.type].trim();
+        if (isUsableLinkUrl(url, slot.type)) {
+            links.push({ type: slot.type, url });
         }
     }
-    return faGlobe;
-}
-
-/** The label is optional; the link's hostname stands in when it is empty. */
-function linkLabel(link: UserProfileLink) {
-    return link.label || hostname(link.url);
+    for (const row of customRows.value) {
+        if (isUsableLinkUrl(row.url)) {
+            links.push({ type: "custom", url: row.url.trim() });
+        }
+    }
+    return links;
 }
 
 function commit() {
-    emit("update:links", validRows());
+    emit("update:links", validLinks());
 }
 
-function onUrlInput(index: number, value: string) {
-    const row = rows.value[index];
+function onSlotInput(type: WellKnownLinkType, value: string) {
+    wellKnown.value[type] = value;
+    commit();
+}
+
+function onCustomInput(index: number, value: string) {
+    const row = customRows.value[index];
     if (row) {
         row.url = value;
         commit();
     }
 }
 
-function onLabelInput(index: number, value: string) {
-    const row = rows.value[index];
-    if (row) {
-        row.label = value;
-        commit();
-    }
+function addCustomRow() {
+    customRows.value.push({ url: "" });
 }
 
-function addRow() {
-    rows.value.push({ label: "", url: "" });
-}
-
-function removeRow(index: number) {
-    rows.value.splice(index, 1);
+function removeCustomRow(index: number) {
+    customRows.value.splice(index, 1);
     commit();
 }
 </script>
 
 <template>
     <div v-if="props.editable" class="profile-links d-flex flex-column">
-        <!-- every link is a live input pair; the label is optional and falls
-             back to the URL's hostname -->
-        <div v-for="(row, index) in rows" :key="index" class="profile-links-editor d-flex flex-column">
+        <!-- the three fixed slots are always visible, GitHub-profile style -->
+        <BFormGroup
+            v-for="slot in WELL_KNOWN_LINKS"
+            :key="slot.type"
+            class="profile-links-slot mb-0"
+            :label="slot.label"
+            :label-for="`${slotUid}-${slot.type}`">
             <div class="profile-links-editor-url d-flex align-items-center">
-                <FontAwesomeIcon :icon="linkIcon(row)" fixed-width />
+                <FontAwesomeIcon :icon="profileLinkIcon({ type: slot.type, url: wellKnown[slot.type] })" fixed-width />
 
                 <BFormInput
+                    :id="`${slotUid}-${slot.type}`"
                     class="flex-fill"
-                    placeholder="https://…"
+                    :data-description="`profile link ${slot.type}`"
+                    :placeholder="slot.placeholder"
                     size="sm"
                     type="url"
-                    :value="row.url"
-                    @update="onUrlInput(index, $event)" />
+                    :value="wellKnown[slot.type]"
+                    @update="onSlotInput(slot.type, $event)" />
+            </div>
+        </BFormGroup>
+
+        <BFormGroup class="profile-links-customs mb-0" label="Other links">
+            <div class="d-flex flex-column profile-links-customs-body">
+                <div
+                    v-for="(row, index) in customRows"
+                    :key="index"
+                    class="profile-links-editor-url d-flex align-items-center">
+                    <FontAwesomeIcon :icon="profileLinkIcon({ type: 'custom', url: row.url })" fixed-width />
+
+                    <BFormInput
+                        class="flex-fill"
+                        data-description="profile link custom"
+                        placeholder="https://…"
+                        size="sm"
+                        type="url"
+                        :value="row.url"
+                        @update="onCustomInput(index, $event)" />
+
+                    <GButton
+                        color="grey"
+                        size="small"
+                        icon-only
+                        transparent
+                        title="Remove link"
+                        aria-label="Remove link"
+                        @click="removeCustomRow(index)">
+                        <FontAwesomeIcon :icon="faTrash" fixed-width />
+                    </GButton>
+                </div>
 
                 <GButton
+                    v-if="canAdd"
+                    id="profile-links-add"
+                    class="align-self-start"
                     color="grey"
                     size="small"
-                    icon-only
                     transparent
-                    title="Remove link"
-                    aria-label="Remove link"
-                    @click="removeRow(index)">
-                    <FontAwesomeIcon :icon="faTrash" fixed-width />
+                    @click="addCustomRow">
+                    <FontAwesomeIcon :icon="faPlus" />
+                    <span v-localize>Add link</span>
                 </GButton>
             </div>
-
-            <BFormInput
-                class="profile-links-editor-label"
-                placeholder="Label (optional)"
-                size="sm"
-                :value="row.label"
-                @update="onLabelInput(index, $event)" />
-        </div>
-
-        <GButton v-if="canAdd" id="profile-links-add" color="grey" size="small" transparent @click="addRow">
-            <FontAwesomeIcon :icon="faPlus" />
-            <span v-localize>Add link</span>
-        </GButton>
+        </BFormGroup>
     </div>
 
     <div v-else-if="props.links.length > 0" class="profile-links d-flex flex-column">
         <div v-for="(link, index) in props.links" :key="index" class="profile-links-row d-flex align-items-center">
-            <FontAwesomeIcon :icon="linkIcon(link)" fixed-width />
+            <FontAwesomeIcon :icon="profileLinkIcon(link)" fixed-width />
 
             <a class="profile-links-anchor" :href="link.url" rel="noopener noreferrer" target="_blank">
-                {{ linkLabel(link) }}
+                {{ profileLinkText(link) }}
                 <FontAwesomeIcon class="profile-links-external" :icon="faExternalLinkAlt" size="xs" />
             </a>
         </div>
@@ -211,18 +225,21 @@ function removeRow(index: number) {
         }
     }
 
-    .profile-links-editor {
-        gap: 0.25rem;
-
-        .profile-links-editor-url {
-            gap: 0.35rem;
+    .profile-links-slot,
+    .profile-links-customs {
+        ::v-deep legend,
+        ::v-deep label {
+            font-size: 0.8rem;
+            padding-bottom: 0.1rem;
         }
+    }
 
-        // aligns the label input under the URL input, past the brand icon
-        .profile-links-editor-label {
-            margin-left: 1.6rem;
-            width: auto;
-        }
+    .profile-links-customs-body {
+        gap: 0.4rem;
+    }
+
+    .profile-links-editor-url {
+        gap: 0.35rem;
     }
 }
 </style>
