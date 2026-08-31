@@ -81,6 +81,14 @@ export interface FetchHistoryListOptions {
     sortDesc?: boolean;
     /** Discard the cached ids of this variant instead of merging into them. */
     replace?: boolean;
+    /**
+     * Whether the fetched entries make up the cached listing of this variant.
+     * Defaults to `true`. A one-off search that is not the listing (the command
+     * palette's root fan-out, say) sets it to `false`: the entries are still
+     * cached as summaries, but the variant's id list, total and loaded flag are
+     * left alone, so a later listing is neither shortened nor skipped.
+     */
+    record?: boolean;
 }
 
 function emptyHistoryListIds(): Record<HistoryListVariant, string[]> {
@@ -527,11 +535,8 @@ export const useHistoryStore = defineStore("historyStore", () => {
         return promise;
     }
 
-    /**
-     * Merges fetched entries into the shared summary map and updates the
-     * ordered id list of the given variant, keeping ids unique.
-     */
-    function setListedHistories(variant: HistoryListVariant, histories: AnyHistoryEntry[], replace = false) {
+    /** Merges fetched entries into the shared summary map, listing or not. */
+    function cacheListedHistories(histories: AnyHistoryEntry[]) {
         histories.forEach((history) => {
             const storedHistory = listedHistories.value[history.id];
             // Incoming summaries may carry fewer fields than what is already
@@ -539,6 +544,14 @@ export const useHistoryStore = defineStore("historyStore", () => {
             // instead of overwriting.
             set(listedHistories.value, history.id, storedHistory ? { ...storedHistory, ...history } : history);
         });
+    }
+
+    /**
+     * Merges fetched entries into the shared summary map and updates the
+     * ordered id list of the given variant, keeping ids unique.
+     */
+    function setListedHistories(variant: HistoryListVariant, histories: AnyHistoryEntry[], replace = false) {
+        cacheListedHistories(histories);
         const incomingIds = histories.map((history) => history.id);
         const mergedIds = replace ? incomingIds : [...listedHistoryIds.value[variant], ...incomingIds];
         listedHistoryIds.value[variant] = Array.from(new Set(mergedIds));
@@ -550,7 +563,7 @@ export const useHistoryStore = defineStore("historyStore", () => {
      * histories are updated in place.
      *
      * @param variant Which listing to fetch
-     * @param options Pagination, sorting and search options
+     * @param options Pagination, sorting, search and caching options
      * @returns The fetched entries, in the order the backend returned them
      */
     function fetchHistoryList(
@@ -564,18 +577,22 @@ export const useHistoryStore = defineStore("historyStore", () => {
             sortBy = "update_time",
             sortDesc = true,
             replace = false,
+            record = true,
         } = options;
-        const key = [variant, search, limit, offset, sortBy, sortDesc, replace].join("|");
+        const key = [variant, search, limit, offset, sortBy, sortDesc, replace, record].join("|");
 
         const pending = listPromises.get(key);
         if (pending) {
             return pending.promise;
         }
-        const promise = requestHistoryList(variant, { search, limit, offset, sortBy, sortDesc }, replace).finally(
-            () => {
-                listPromises.delete(key);
-            },
-        );
+        const promise = requestHistoryList(
+            variant,
+            { search, limit, offset, sortBy, sortDesc },
+            replace,
+            record,
+        ).finally(() => {
+            listPromises.delete(key);
+        });
         listPromises.set(key, { variant, promise });
         return promise;
     }
@@ -591,6 +608,7 @@ export const useHistoryStore = defineStore("historyStore", () => {
             sortDesc: boolean;
         },
         replace: boolean,
+        record: boolean,
     ): Promise<AnyHistoryEntry[]> {
         listedHistoriesLoading.value[variant] = true;
         try {
@@ -602,9 +620,15 @@ export const useHistoryStore = defineStore("historyStore", () => {
             } else {
                 result = await getArchivedHistories(requestOptions);
             }
-            setListedHistories(variant, result.data, replace);
-            listedHistoriesTotal.value[variant] = result.total;
-            listedHistoriesLoaded.value[variant] = true;
+            if (record) {
+                setListedHistories(variant, result.data, replace);
+                listedHistoriesTotal.value[variant] = result.total;
+                listedHistoriesLoaded.value[variant] = true;
+            } else {
+                // the entries answer this request alone, so they are cached as
+                // summaries without joining (or completing) the listing
+                cacheListedHistories(result.data);
+            }
             return result.data.map((history) => listedHistories.value[history.id] ?? history);
         } catch (error) {
             rethrowSimple(error);
