@@ -5,7 +5,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useServerMock } from "@/api/client/__mocks__";
 import type { StepJobSummary, WorkflowInvocation, WorkflowJobMetric } from "@/api/invocations";
 
+import { useHistoryStore } from "./historyStore";
 import { useInvocationStore } from "./invocationStore";
+import { useWorkflowStore } from "./workflowStore";
 
 const { server, http } = useServerMock();
 
@@ -152,6 +154,19 @@ describe("stores/invocationStore", () => {
             await store.fetchLatestInvocations(5);
 
             expect(requestedLimits).toEqual(["5"]);
+        });
+
+        it("resolves the workflow and history names before it settles", async () => {
+            const store = useInvocationStore();
+
+            await store.fetchLatestInvocations();
+
+            // the grid's `getData` only starts these lookups -- the store awaits
+            // them, so a list rendered right after the fetch shows names instead
+            // of bare ids
+            expect(useWorkflowStore().getStoredWorkflowNameByInstanceId("workflow-inv2")).toBe("Workflow");
+            expect(useHistoryStore().getHistoryById("history-inv2", false)?.name).toBe("History");
+            expect(store.hasLoadedLatestInvocations).toBe(true);
         });
 
         it("merges the fetched invocations into the shared cache instead of duplicating them", async () => {
