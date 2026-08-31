@@ -17,7 +17,16 @@ const VARIANT_QUERY: Record<PageListVariant, Pick<LoadPagesOptions, "showOwn" | 
     published: { showOwn: false, showShared: true, showPublished: true },
 };
 
-export type FetchPagesOptions = Omit<LoadPagesOptions, "showOwn" | "showShared" | "showPublished">;
+export type FetchPagesOptions = Omit<LoadPagesOptions, "showOwn" | "showShared" | "showPublished"> & {
+    /**
+     * Whether the fetched pages make up the cached listing of this variant.
+     * Defaults to `true`. A one-off search that is not the listing (the command
+     * palette's root fan-out, say) sets it to `false`: the pages are still
+     * cached as summaries, but the variant's id list and loaded flag are left
+     * alone, so a later listing is neither shortened nor skipped.
+     */
+    record?: boolean;
+};
 
 export const usePageStore = defineStore("pageStore", () => {
     const summariesById = ref<Record<string, PageSummary>>({});
@@ -74,13 +83,19 @@ export const usePageStore = defineStore("pageStore", () => {
         return [...existing, ...incoming.filter((pageId) => !existingIds.has(pageId))];
     }
 
-    /** Merges pages into the summary cache and into the given variant's id list. */
-    function savePages(variant: PageListVariant, pages: PageSummary[], atFront = false) {
+    /** Merges pages into the summary cache, listing or not. */
+    function cachePages(pages: PageSummary[]): string[] {
         const incomingIds: string[] = [];
         for (const page of pages) {
             set(summariesById.value, page.id, page);
             incomingIds.push(page.id);
         }
+        return incomingIds;
+    }
+
+    /** Merges pages into the summary cache and into the given variant's id list. */
+    function savePages(variant: PageListVariant, pages: PageSummary[], atFront = false) {
+        const incomingIds = cachePages(pages);
         set(idsByVariant.value, variant, mergeIds(idsByVariant.value[variant], incomingIds, atFront));
     }
 
@@ -101,8 +116,8 @@ export const usePageStore = defineStore("pageStore", () => {
      * Concurrent identical requests share a single promise.
      */
     async function fetchPages(variant: PageListVariant, options: FetchPagesOptions = {}): Promise<PageSummary[]> {
-        const { search = "", sortBy = "update_time", sortDesc = true, limit = 20, offset = 0 } = options;
-        const key = [variant, search, sortBy, sortDesc, limit, offset].join("|");
+        const { search = "", sortBy = "update_time", sortDesc = true, limit = 20, offset = 0, record = true } = options;
+        const key = [variant, search, sortBy, sortDesc, limit, offset, record].join("|");
 
         const pending = fetchPromises.get(key);
         if (pending) {
@@ -122,12 +137,18 @@ export const usePageStore = defineStore("pageStore", () => {
                     limit,
                     offset,
                 });
-                savePages(variant, data, isFullListing);
-                if (isFullListing) {
-                    set(totalMatchesByVariant.value, variant, totalMatches);
-                    set(fullyListedVariants.value, variant, true);
+                if (record) {
+                    savePages(variant, data, isFullListing);
+                    if (isFullListing) {
+                        set(totalMatchesByVariant.value, variant, totalMatches);
+                        set(fullyListedVariants.value, variant, true);
+                    }
+                    set(loadedVariants.value, variant, true);
+                } else {
+                    // the pages answer this request alone, so they are cached as
+                    // summaries without joining (or completing) the listing
+                    cachePages(data);
                 }
-                set(loadedVariants.value, variant, true);
                 return data;
             } finally {
                 set(loadingVariants.value, variant, false);
