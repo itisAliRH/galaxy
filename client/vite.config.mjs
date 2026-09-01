@@ -14,6 +14,22 @@ import { galaxyLegacyPlugin } from "./vite-plugin-galaxy-legacy.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(readFileSync(resolve(__dirname, "package.json"), "utf-8"));
 
+const devServerPort = process.env.VITE_PORT || 5173;
+
+/**
+ * Host the dev server is reached through when that is not localhost: a
+ * Codespaces forwarded port, a tunnel (cloudflared, ngrok) or a reverse proxy.
+ * Vite rejects requests whose Host header it was not told about, and the HMR
+ * client has to dial back through that host over TLS rather than
+ * ws://localhost. Set VITE_PUBLIC_HOST to the bare hostname (no scheme, no
+ * port) when the host is not derivable from the environment.
+ */
+const codespaceHost =
+    process.env.CODESPACE_NAME && process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN
+        ? `${process.env.CODESPACE_NAME}-${devServerPort}.${process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}`
+        : undefined;
+const publicHost = process.env.VITE_PUBLIC_HOST || codespaceHost;
+
 /**
  * Plugin to fix D3 v3 ES module compatibility
  * D3 v3 is an IIFE that expects `this` to be `window` at the module level.
@@ -155,8 +171,9 @@ export default defineConfig(({ command }) => ({
         },
     },
     server: {
-        port: process.env.VITE_PORT || 5173,
+        port: devServerPort,
         host: "0.0.0.0",
+        ...(publicHost ? { allowedHosts: [publicHost] } : {}),
         proxy: {
             // Proxy everything except Vite's own routes to Galaxy backend.
             // `packages/` is served by Vite as well: the workspace packages are
@@ -188,7 +205,8 @@ export default defineConfig(({ command }) => ({
                             const targetUrl = new URL(process.env.GALAXY_URL || "http://127.0.0.1:8080");
                             const locationUrl = new URL(location, targetUrl);
                             const fallbackDevHost = req.headers.host || `localhost:${process.env.VITE_PORT || 5173}`;
-                            const devOrigin = req.headers.origin || `http://${fallbackDevHost}`;
+                            const devScheme = publicHost ? "https" : "http";
+                            const devOrigin = req.headers.origin || `${devScheme}://${fallbackDevHost}`;
 
                             // Only rewrite locations generated for the Galaxy backend.
                             if (locationUrl.origin === targetUrl.origin) {
@@ -201,10 +219,16 @@ export default defineConfig(({ command }) => ({
             },
         },
         cors: true,
-        hmr: {
-            protocol: "ws",
-            host: "localhost",
-        },
+        hmr: publicHost
+            ? {
+                  protocol: "wss",
+                  host: publicHost,
+                  clientPort: 443,
+              }
+            : {
+                  protocol: "ws",
+                  host: "localhost",
+              },
     },
     worker: {
         format: "es",
