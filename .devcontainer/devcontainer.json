@@ -1,0 +1,35 @@
+{
+  "name": "Galaxy command palette preview",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "containerEnv": {
+    "GALAXY_URL": "https://usegalaxy.eu/",
+    "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
+    "NODE_OPTIONS": "--max-old-space-size=6144"
+  },
+  "onCreateCommand": ".devcontainer/post-create.sh",
+  "postAttachCommand": {
+    "client-dev-server": "cd client && pnpm run develop"
+  },
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": {
+      "label": "Galaxy client",
+      "onAutoForward": "openBrowser",
+      "visibility": "private"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Vue.volar",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}
