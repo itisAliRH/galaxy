@@ -204,9 +204,15 @@ export default defineConfig(({ command }) => ({
                         if (location) {
                             const targetUrl = new URL(process.env.GALAXY_URL || "http://127.0.0.1:8080");
                             const locationUrl = new URL(location, targetUrl);
-                            const fallbackDevHost = req.headers.host || `localhost:${process.env.VITE_PORT || 5173}`;
-                            const devScheme = publicHost ? "https" : "http";
-                            const devOrigin = req.headers.origin || `${devScheme}://${fallbackDevHost}`;
+                            // Neither Host nor Origin can be trusted to name the origin the
+                            // browser uses: Codespaces and tunnels forward to the dev server
+                            // over a local hop, so requests arrive with `Host: localhost:PORT`
+                            // and iframe navigations carry no Origin at all. Redirects would
+                            // then send the browser to a localhost URL it cannot reach.
+                            const fallbackDevHost = req.headers.host || `localhost:${devServerPort}`;
+                            const devOrigin = publicHost
+                                ? `https://${publicHost}`
+                                : req.headers.origin || `http://${fallbackDevHost}`;
 
                             // Only rewrite locations generated for the Galaxy backend.
                             if (locationUrl.origin === targetUrl.origin) {
