@@ -8,10 +8,10 @@
   },
   "containerEnv": {
     "GALAXY_URL": "https://usegalaxy.eu/",
-    "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
     "NODE_OPTIONS": "--max-old-space-size=6144"
   },
-  "onCreateCommand": ".devcontainer/post-create.sh",
+  "postCreateCommand": ".devcontainer/post-create.sh",
+  "waitFor": "postCreateCommand",
   "postAttachCommand": {
     "client-dev-server": "cd client && pnpm run develop"
   },
