@@ -61,9 +61,7 @@ class QueryRouterAgent(BaseGalaxyAgent):
     ROUTING_HISTORY_TURNS = 1
 
     def _create_agent(self) -> Agent[GalaxyAgentDependencies, str]:
-        model_name = self._get_agent_config("model", "")
-
-        if "deepseek" in model_name.lower():
+        if not self._supports_structured_output():
             return Agent(
                 self._get_model(),
                 deps_type=GalaxyAgentDependencies,

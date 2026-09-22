@@ -1525,6 +1525,21 @@ class TestAgentUnitMocked:
         gpt_agent = ErrorAnalysisAgent(self.deps)
         assert gpt_agent._supports_structured_output() is False
 
+    def test_router_falls_back_to_plain_conversation_by_capability(self):
+        # The router picks its handoff-free fallback by the same capability check as
+        # every other agent: the admin override decides, not the model name.
+        self.mock_config.ai_model = "gpt-4o"
+        self.mock_config.inference_services = {"router": {"structured_output_override": False}}
+        with mock.patch.object(QueryRouterAgent, "_get_simple_system_prompt", return_value="simple") as simple:
+            QueryRouterAgent(self.deps)
+        simple.assert_called_once()
+
+        self.mock_config.ai_model = "deepseek-r1"
+        self.mock_config.inference_services = {"router": {"structured_output_override": True}}
+        with mock.patch.object(QueryRouterAgent, "_get_simple_system_prompt", return_value="simple") as simple:
+            QueryRouterAgent(self.deps)
+        simple.assert_not_called()
+
     def test_supports_structured_output_falls_back_to_default(self):
         """Unknown model names hit the table's default block."""
         self.mock_config.inference_services = None
