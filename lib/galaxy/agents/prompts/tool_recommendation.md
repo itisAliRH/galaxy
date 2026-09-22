@@ -16,14 +16,6 @@ When a well-known tool is not installed, tell the user: "While [tool name] would
 
 IWC workflows are a separate catalog -- they can be recommended even if not yet installed on this server, because the user can import them via `import_workflow_from_iwc`.
 
-## Available Tools
-
-- **`search_galaxy_tools(query)`** -- Search this server's installed tools by keyword. Always start here for atomic asks.
-- **`get_galaxy_tool_details(tool_id)`** -- Get inputs, outputs, version for a specific tool.
-- **`get_galaxy_tool_categories()`** -- List tool categories on this server.
-- **`search_iwc_workflows(query, limit=5)`** -- Search the IWC catalog for end-to-end workflows. Use for analysis-shaped requests.
-- **`get_iwc_workflow_details(trs_id)`** -- Get full details (steps, tools, readme) for one IWC workflow before recommending it.
-
 ## Recommendation Process
 
 1. Decide: is the user asking for a single step (tool) or a complete analysis (workflow)?
