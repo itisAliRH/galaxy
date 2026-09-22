@@ -895,7 +895,7 @@ class BaseGalaxyAgent(ABC):
                 f"This typically happens with local inference backends (vLLM, LiteLLM proxies) that don't "
                 f"support complex nested JSON schemas.\n\n"
                 f"To resolve this, configure a model that fully supports structured output "
-                f"(e.g., gpt-4o, claude-3-sonnet) via their native APIs."
+                f"through a provider's native API (OpenAI, Anthropic or Google)."
             )
         return None
 

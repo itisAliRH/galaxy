@@ -907,7 +907,7 @@ The tool is ready to be saved and used in Galaxy."""
                     "This typically happens with local inference backends (vLLM, LiteLLM proxies) that don't "
                     "support complex nested JSON schemas.\n\n"
                     "To resolve this, configure a model that fully supports structured output "
-                    "(e.g., gpt-4o, claude-3-sonnet) via their native APIs."
+                    "through a provider's native API (OpenAI, Anthropic or Google)."
                 ),
                 confidence=ConfidenceLevel.LOW,
                 method="error",
@@ -933,7 +933,7 @@ The tool is ready to be saved and used in Galaxy."""
             content=(
                 f"The model '{model}' was unable to generate a valid tool definition after multiple attempts. "
                 "This may indicate the model doesn't fully support the required structured output format.\n\n"
-                "Try using a model with better structured output support (e.g., gpt-4o, claude-3-sonnet)."
+                "Try a model with native structured output support through OpenAI, Anthropic or Google."
             ),
             confidence=ConfidenceLevel.LOW,
             method="error",
