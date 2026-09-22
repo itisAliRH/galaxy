@@ -69,6 +69,10 @@ galaxy:
 Anthropic support requires the optional `pydantic-ai[anthropic]` Python package to be installed in Galaxy's virtual environment. If it is not installed, agents configured with an `anthropic:` model prefix will fail at runtime.
 ```
 
+```{note}
+Galaxy always sends a sampling temperature (0.7 by default, 0.2 for `custom_tool`). Claude Opus 4.7 and later, Claude Sonnet 5 and the Claude Fable 5 and Mythos 5 models reject sampling parameters, so pydantic-ai drops the temperature for them with a warning, and the `temperature` setting has no effect. Claude Opus 5, Claude Sonnet 5 and the Fable 5 and Mythos 5 models also think by default, and thinking tokens count toward `max_tokens` -- raise it (the default is 8192, or 16384 for the history, orchestrator and custom_tool agents; 32768 is a reasonable start) if responses come back truncated.
+```
+
 ### Google / Gemini
 
 Use the `google:` prefix, e.g. `google:gemini-2.5-pro`.
