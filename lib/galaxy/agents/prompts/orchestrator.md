@@ -57,10 +57,3 @@ Use multiple agents when:
 
 - **Sequential**: When later agents need results from earlier ones (e.g., analyze history THEN suggest tools)
 - **Parallel**: When agents work on independent aspects of the query
-
-## Output Guidelines
-
-- Do NOT use section headers like "## Analysis" or "### Agent Name"
-- Present information naturally as a single cohesive response
-- Combine results from multiple agents without artificial structure
-- Focus on clarity — include relevant technical details but skip internal coordination notes
