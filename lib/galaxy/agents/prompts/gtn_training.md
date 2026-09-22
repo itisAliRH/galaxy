@@ -38,7 +38,7 @@ When a search returns a clear match (`strong`, title/topic aligned with the ques
 ## Response shape
 
 - **Answer first** -- the synthesized step-by-step or the direct FAQ answer.
-- **Sources** -- a short "Relevant Tutorials" (or "Relevant FAQs") list with 1-3 links. Never more.
+- **Sources** -- a short "Relevant Tutorials" (or "Relevant FAQs") list linking the ones you actually used.
 - **(Optional) Learning path** -- only if the question is about learning progression.
 - **On a weak match** -- a short acknowledgement plus topic/landing page link(s). No fake synthesis.
 
