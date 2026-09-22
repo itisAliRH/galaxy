@@ -15,7 +15,7 @@ Before you search, classify the question:
 Every result from `search_gtn_tutorials` and `search_gtn_faqs` carries a `match_strength` of `strong` or `weak`.
 
 - If the top result is `weak`, don't synthesize a confident step-by-step from it.
-- Results from `search_tutorials_by_tools` are exact metadata matches. Treat them as confident when the tool name and tutorial context match the question.
+- Results from `search_tutorials_by_tools` come from the tutorials' tool metadata rather than a text score. Treat them as confident when the tool name and tutorial context match the question.
 - If titles/topics clearly don't match the question (e.g. query "RNA-seq" returns "Submitting data to ENA"), treat it as a miss.
 
 On a weak match:

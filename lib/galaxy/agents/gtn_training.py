@@ -137,7 +137,26 @@ class GTNTrainingAgent(BaseGalaxyAgent):
             hands_on_only: bool = False,
             limit: int = 5,
         ) -> str:
-            """Search GTN tutorials using full-text search over titles, descriptions, and content."""
+            """Search GTN tutorials by full-text match over titles, descriptions, and content.
+
+            Use for analysis-shaped questions ("how do I do RNA-seq", "variant calling").
+            For short definitional questions prefer ``search_gtn_faqs``; to find tutorials
+            that use a named Galaxy tool use ``search_tutorials_by_tools``. Counts against
+            the per-question tool budget.
+
+            Returns JSON ``{"results": [...], "count": n}``; each result has ``title``,
+            ``topic``, ``tutorial``, ``url``, ``difficulty``, ``time_estimation``,
+            ``snippet``, ``score`` (BM25, higher is better) and ``match_strength``
+            (``strong`` or ``weak``). Pass ``topic`` and ``tutorial`` to
+            ``get_tutorial_content``.
+
+            Args:
+                query: free-text search terms.
+                topic: optional GTN topic slug to restrict to (see ``list_gtn_topics``).
+                difficulty: optional GTN level: introductory, intermediate or advanced.
+                hands_on_only: restrict to hands-on tutorials.
+                limit: maximum number of results.
+            """
             over_budget = self._charge_tool_budget()
             if over_budget:
                 return over_budget
@@ -168,7 +187,12 @@ class GTNTrainingAgent(BaseGalaxyAgent):
             tutorial: str,
             max_length: int = 1500,
         ) -> str:
-            """Get the full content of a specific tutorial by topic and name."""
+            """Read the text of one GTN tutorial, truncated to ``max_length`` characters.
+
+            Use after a search, passing the ``topic`` and ``tutorial`` fields of a result.
+            Returns plain text, or a "not found" message when the pair does not exist.
+            Counts against the per-question tool budget.
+            """
             over_budget = self._charge_tool_budget()
             if over_budget:
                 return over_budget
@@ -183,7 +207,11 @@ class GTNTrainingAgent(BaseGalaxyAgent):
 
         @agent.tool
         async def list_gtn_topics(ctx: RunContext[GalaxyAgentDependencies]) -> str:
-            """List all available GTN tutorial topics."""
+            """List the GTN topic slugs, for use as the ``topic`` filter of ``search_gtn_tutorials``.
+
+            Returns JSON ``{"topics": [...], "count": n}``. Does not count against the
+            per-question tool budget.
+            """
             if not self.gtn_db:
                 return json.dumps({"error": "GTN database not available"})
             try:
@@ -205,7 +233,11 @@ class GTNTrainingAgent(BaseGalaxyAgent):
             FAQs are curated short answers covering Galaxy interface basics
             ("what is a history", "how do I share a workflow"). Prefer this
             over ``search_gtn_tutorials`` for definitional and quick how-to
-            questions.
+            questions. Counts against the per-question tool budget.
+
+            Returns JSON ``{"results": [...], "count": n}``; each result has
+            ``title``, ``category``, ``url``, ``snippet``, ``score`` and
+            ``match_strength`` (``strong`` or ``weak``).
             """
             over_budget = self._charge_tool_budget()
             if over_budget:
@@ -230,7 +262,17 @@ class GTNTrainingAgent(BaseGalaxyAgent):
             tool_names: list[str],
             limit: int = 5,
         ) -> str:
-            """Find tutorials that use specific Galaxy tools."""
+            """Find tutorials whose tool metadata contains any of the given tool names.
+
+            Use when the user names a tool ("what tutorials use samtools?"). Names match
+            as substrings (``bwa`` also finds ``bwa_mem2``) and every result has the same
+            score, so judge relevance from the titles. Counts against the per-question
+            tool budget.
+
+            Args:
+                tool_names: tool names to look up, e.g. ``["multiqc"]``.
+                limit: maximum number of results.
+            """
             over_budget = self._charge_tool_budget()
             if over_budget:
                 return over_budget
