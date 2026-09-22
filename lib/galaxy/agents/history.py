@@ -142,7 +142,8 @@ class HistoryAgent(BaseGalaxyAgent):
             Use this for questions about LINEAGE, PROVENANCE, or HOW a dataset was
             produced, and when summarizing an analysis end-to-end. Returns nodes
             (datasets, collections, tool_requests) and edges showing producer/consumer
-            relationships, plus truncation info indicating whether the graph was capped.
+            relationships, plus a ``truncated`` block; when its ``item_count_capped`` is
+            true the graph covers only the most recent items in scope.
 
             Args:
                 history_id: encoded id from list_user_histories.
@@ -155,14 +156,6 @@ class HistoryAgent(BaseGalaxyAgent):
                     the seed used for), or "both". Only meaningful when seed is set.
                 depth: max BFS hops from the seed (default 5).
                 limit: max items to include (default 200, max 1000).
-
-            Tips:
-                - For "summarize my analysis" or "write a methods section", call with
-                  no seed for a history-wide overview.
-                - For "how was dataset X made", pass X's id as seed_id with
-                  seed_src="hda" and direction=backward.
-                - Check `truncated` in the response. If item_count_capped is true, the
-                  graph is bounded and your summary should say so.
             """
             try:
                 return self.ops.get_history_graph(
