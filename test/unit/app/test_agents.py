@@ -1545,6 +1545,13 @@ class TestAgentUnitMocked:
         # DeepSeek family is explicitly opted out.
         assert _capability_for_model("deepseek-r1", "structured_output", table) is False
         assert _capability_for_model("deepseek-v3", "structured_output", table) is False
+        # A colon that isn't a provider prefix is part of the name (Ollama tags), and
+        # DeepSeek is matched anywhere in routed or provider-qualified names.
+        assert _capability_for_model("deepseek-r1:14b", "structured_output", table) is False
+        assert _capability_for_model("openai:deepseek-r1:14b", "structured_output", table) is False
+        assert _capability_for_model("accounts/fireworks/models/deepseek-v3", "structured_output", table) is False
+        assert _capability_for_model("together:deepseek-r1", "structured_output", table) is False
+        assert _capability_for_model("us.deepseek.r1-v1:0", "structured_output", table) is False
 
     def test_capability_table_falls_back_when_file_is_missing(self):
         """Pointing at a non-existent path should fall back to the built-in defaults."""

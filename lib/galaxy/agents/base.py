@@ -121,7 +121,7 @@ _ROLE_MARKERS = ("system:", "assistant:")
 # previous behaviour (deepseek -> no structured output, everything else yes).
 _DEFAULT_MODEL_CAPABILITIES: dict[str, Any] = {
     "model_capabilities": [
-        {"pattern": "deepseek*", "structured_output": False},
+        {"pattern": "*deepseek*", "structured_output": False},
     ],
     "default": {"structured_output": True},
 }
@@ -159,18 +159,25 @@ def _load_model_capabilities(path: str | None, force_reload: bool = False) -> di
     return parsed
 
 
+_PROVIDER_PREFIXES = ("anthropic:", "google:", "openai:")
+
+
 def _capability_for_model(model_name: str, capability: str, table: dict[str, Any]) -> bool | None:
     """Look up `capability` for `model_name` against the parsed table.
 
-    Strips any `provider:` prefix before matching. Returns None when neither
-    a pattern nor a default entry covers the capability -- callers decide
+    Strips a known `provider:` prefix before matching; any other colon belongs to
+    the model name (Ollama tags such as ``deepseek-r1:14b``). Returns None when
+    neither a pattern nor a default entry covers the capability -- callers decide
     what to do with that.
     """
     if not model_name:
         return None
 
-    bare_name = model_name.split(":", 1)[1] if ":" in model_name else model_name
-    bare_name = bare_name.lower()
+    bare_name = model_name.lower()
+    for prefix in _PROVIDER_PREFIXES:
+        if bare_name.startswith(prefix):
+            bare_name = bare_name[len(prefix) :]
+            break
 
     for entry in table.get("model_capabilities", []) or []:
         if not isinstance(entry, dict):

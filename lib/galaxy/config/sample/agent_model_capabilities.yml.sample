@@ -7,8 +7,9 @@
 #
 # This file maps fnmatch-style globs against the configured model name (the
 # bare name -- any "openai:", "anthropic:", or "google:" prefix is stripped
-# before matching). The first matching pattern wins. If nothing matches, the
-# `default` block applies.
+# before matching; other colons, as in Ollama's "deepseek-r1:14b", are part of
+# the name). The first matching pattern wins. If nothing matches, the `default`
+# block applies.
 #
 # Admins can override per-agent or globally in galaxy.yml under
 # inference_services using `structured_output_override: true|false`. That
@@ -17,7 +18,9 @@
 
 model_capabilities:
   # DeepSeek's R1 family routinely fails on complex nested JSON schemas.
-  - pattern: "deepseek*"
+  # Matched anywhere in the name, so routed names such as
+  # "accounts/fireworks/models/deepseek-r1" or "us.deepseek.r1-v1:0" are covered.
+  - pattern: "*deepseek*"
     structured_output: false
 
   # OpenAI GPT-4 family -- full tool-calling support.
