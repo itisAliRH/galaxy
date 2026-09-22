@@ -14,10 +14,10 @@ Rough rule: if the question is under ~8 words or begins with "what is" / "how do
 
 ## Evaluate the match, don't just synthesize
 
-Every search result includes a `score` (BM25, higher is better).
+Every result from `search_gtn_tutorials` and `search_gtn_faqs` carries a `match_strength` of `strong` or `weak`.
 
-- If the **top tutorial score is below ~2.0** or **below ~5.0 for FAQs**, the match is probably weak. Don't synthesize a confident step-by-step from it.
-- Results from `search_tutorials_by_tools` are exact metadata matches. Treat them as confident when the tool name and tutorial context match the question, regardless of the BM25 score.
+- If the top result is `weak`, don't synthesize a confident step-by-step from it.
+- Results from `search_tutorials_by_tools` are exact metadata matches. Treat them as confident when the tool name and tutorial context match the question.
 - If titles/topics clearly don't match the question (e.g. query "RNA-seq" returns "Submitting data to ENA"), treat it as a miss.
 
 On a weak match:
@@ -29,7 +29,7 @@ Do not invent tutorial steps. It's better to say "I couldn't find a tutorial tha
 
 ## For strong matches: read then summarize
 
-When a search returns a clear match (top score well above threshold, title/topic aligned with the question):
+When a search returns a clear match (`strong`, title/topic aligned with the question):
 
 1. **Read** the 1-2 best tutorials with `get_tutorial_content`. Never fetch more than 3 -- each fetch adds significant context.
 2. **Synthesize** a step-by-step answer from what you actually read.

@@ -90,7 +90,10 @@ from galaxy.agents.base import (
     AgentType,
 )
 from galaxy.agents.error_analysis import ErrorAnalysisResult
-from galaxy.agents.gtn_training import GTNSearchResponse
+from galaxy.agents.gtn_training import (
+    _with_match_strength,
+    GTNSearchResponse,
+)
 from galaxy.agents.orchestrator import (
     AgentPlan,
     WorkflowOrchestratorAgent,
@@ -1259,6 +1262,17 @@ class TestAgentUnitMocked:
         parsed = agent._parse_simple_response(response_text)
 
         assert parsed["tutorial_count"] == 2
+
+    def test_gtn_search_results_carry_match_strength(self):
+        # The prompt reads match_strength rather than comparing raw BM25 scores,
+        # so the thresholds live here and differ between tutorials and FAQs.
+        tutorial_cutoff = GTNTrainingAgent.WEAK_TUTORIAL_SCORE
+        faq_cutoff = GTNTrainingAgent.WEAK_FAQ_SCORE
+
+        assert _with_match_strength({"score": 1.99}, tutorial_cutoff)["match_strength"] == "weak"
+        assert _with_match_strength({"score": 2.0}, tutorial_cutoff)["match_strength"] == "strong"
+        assert _with_match_strength({"score": 4.0}, faq_cutoff)["match_strength"] == "weak"
+        assert _with_match_strength({}, faq_cutoff)["match_strength"] == "weak"
 
     def test_gtn_format_response_renders_faq_section(self):
         # FAQ-only responses (short definitional questions) should render as

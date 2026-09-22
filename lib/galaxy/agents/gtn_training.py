@@ -35,6 +35,12 @@ from .gtn import GTNSearchDB
 log = logging.getLogger(__name__)
 
 
+def _with_match_strength(result: dict[str, Any], weak_below: float) -> dict[str, Any]:
+    """Label a search result strong or weak so the model needn't compare raw BM25 scores."""
+    result["match_strength"] = "weak" if result.get("score", 0) < weak_below else "strong"
+    return result
+
+
 class GTNSearchResponse(BaseModel):
     """Structured response from GTN training agent."""
 
@@ -60,6 +66,10 @@ class GTNTrainingAgent(BaseGalaxyAgent):
     # data-gathering tool calls and, once spent, return a terminal instruction
     # so the model synthesizes from what it already has instead of looping.
     MAX_TOOL_CALLS = 3
+    # BM25 scores below these are weak matches. Search results carry the verdict as
+    # match_strength so the prompt doesn't ask the model to do the comparison.
+    WEAK_TUTORIAL_SCORE = 2.0
+    WEAK_FAQ_SCORE = 5.0
     # Note: name the search tools explicitly rather than saying "don't call any
     # tools" -- the structured response is itself delivered via an output tool
     # call, so a blanket "no tools" instruction makes the model emit prose that
@@ -143,7 +153,7 @@ class GTNTrainingAgent(BaseGalaxyAgent):
                 )
                 return json.dumps(
                     {
-                        "results": [r.to_dict() for r in results],
+                        "results": [_with_match_strength(r.to_dict(), self.WEAK_TUTORIAL_SCORE) for r in results],
                         "count": len(results),
                     }
                 )
@@ -206,7 +216,7 @@ class GTNTrainingAgent(BaseGalaxyAgent):
                 results = self.gtn_db.search_faqs(query=query, category=category, limit=limit)
                 return json.dumps(
                     {
-                        "results": [r.to_dict() for r in results],
+                        "results": [_with_match_strength(r.to_dict(), self.WEAK_FAQ_SCORE) for r in results],
                         "count": len(results),
                     }
                 )
