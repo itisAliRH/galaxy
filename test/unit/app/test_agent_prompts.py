@@ -21,11 +21,13 @@ import jsonschema
 import pytest
 import yaml
 
+from galaxy.agents.orchestrator import WorkflowOrchestratorAgent
 from galaxy.tool_util_models import UserToolSourceAuthoringView
 from galaxy.util import galaxy_directory
 
 PROMPT_DIR = Path(galaxy_directory()) / "lib" / "galaxy" / "agents" / "prompts"
 CUSTOM_TOOL_PROMPT = PROMPT_DIR / "custom_tool_structured.md"
+ORCHESTRATOR_PROMPT = PROMPT_DIR / "orchestrator.md"
 
 YAML_FENCE = re.compile(r"```yaml\n(.*?)```", re.DOTALL)
 INPUT_REF = re.compile(r"\$\(inputs\.([A-Za-z_][A-Za-z0-9_]*)")
@@ -103,3 +105,13 @@ def test_custom_tool_prompt_documents_a_data_input_format() -> None:
     assert formats, "prompt no longer shows a data input format at all"
     for declared_format in formats:
         assert isinstance(declared_format, list), f"data input format must be a list, got {declared_format!r}"
+
+
+@pytest.mark.parametrize("agent_type", sorted(WorkflowOrchestratorAgent.PLANNABLE_AGENTS))
+def test_orchestrator_prompt_describes_every_plannable_agent(agent_type: str) -> None:
+    """The structured planner only chooses agents its prompt describes.
+
+    An agent the orchestrator can run but whose prompt omits it is unreachable from a
+    generated plan -- gtn_training was, while the router still sent tutorial requests here.
+    """
+    assert f"- **{agent_type}**:" in ORCHESTRATOR_PROMPT.read_text()

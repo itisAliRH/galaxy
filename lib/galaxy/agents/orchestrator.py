@@ -51,6 +51,18 @@ class WorkflowOrchestratorAgent(BaseGalaxyAgent):
     capability_blurb = "Suggest next steps and handle requests that combine several of these."
     DEFAULT_MAX_TOKENS = 16384
 
+    # Agents a generated plan may name. orchestrator.md must describe each one, or the
+    # structured planner can never choose it.
+    PLANNABLE_AGENTS = frozenset(
+        {
+            AgentType.ERROR_ANALYSIS,
+            AgentType.CUSTOM_TOOL,
+            AgentType.HISTORY,
+            AgentType.TOOL_RECOMMENDATION,
+            AgentType.GTN_TRAINING,
+        }
+    )
+
     def __init__(self, deps: GalaxyAgentDependencies):
         super().__init__(deps)
 
@@ -83,17 +95,10 @@ class WorkflowOrchestratorAgent(BaseGalaxyAgent):
         legacy_aliases = {
             "next_step_advisor": AgentType.HISTORY,
         }
-        supported_agents = {
-            AgentType.ERROR_ANALYSIS,
-            AgentType.CUSTOM_TOOL,
-            AgentType.HISTORY,
-            AgentType.TOOL_RECOMMENDATION,
-            AgentType.GTN_TRAINING,
-        }
 
         for agent_name in agents:
             normalized_name = legacy_aliases.get(agent_name, agent_name)
-            if normalized_name not in supported_agents:
+            if normalized_name not in self.PLANNABLE_AGENTS:
                 log.warning(f"Orchestrator: skipping unsupported agent '{agent_name}' from generated plan")
                 continue
             if normalized_name not in normalized:
