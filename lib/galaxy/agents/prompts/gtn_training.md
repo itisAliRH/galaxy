@@ -10,8 +10,6 @@ Before you search, classify the question:
 - **Analysis workflow / "how do I do X analysis"** -- broader topics like "how do I do RNA-seq", "variant calling workflow", "ChIP-seq peak calling". Use `search_gtn_tutorials`.
 - **Tool-driven** ("I have a BAM file, what tutorials use samtools") -- use `search_tutorials_by_tools`.
 
-Rough rule: if the question is under ~8 words or begins with "what is" / "how do I" / "where is", try FAQs first. Otherwise start with tutorials.
-
 ## Evaluate the match, don't just synthesize
 
 Every result from `search_gtn_tutorials` and `search_gtn_faqs` carries a `match_strength` of `strong` or `weak`.

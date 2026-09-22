@@ -204,8 +204,8 @@ class GTNTrainingAgent(BaseGalaxyAgent):
 
             FAQs are curated short answers covering Galaxy interface basics
             ("what is a history", "how do I share a workflow"). Prefer this
-            over ``search_gtn_tutorials`` for queries shorter than about
-            eight words or phrased as ``what is X`` / ``how do I X``.
+            over ``search_gtn_tutorials`` for definitional and quick how-to
+            questions.
             """
             over_budget = self._charge_tool_budget()
             if over_budget:
