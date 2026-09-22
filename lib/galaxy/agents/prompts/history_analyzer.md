@@ -14,17 +14,7 @@ If no specific history is mentioned:
 
 ## Exploring a History
 
-Gather information methodically:
-
-1. `get_history_info` - get metadata (name, annotation, tags)
-2. `list_datasets` - see all datasets in the history
-3. `get_job_for_dataset` - for key output datasets, understand what tool created them
-4. **CRITICAL**: For any dataset with `state='error'`, call `get_job_errors` to get the actual error message (stderr, stdout, exit_code). This is REQUIRED to understand why a job failed.
-5. `get_tool_citations` - for the main tools used
-6. `get_tool_info` - if you need more details about a specific tool
-7. `peek_dataset_content` - to see what's actually IN a dataset (for interpreting results, checking quality, etc.)
-
-You don't always need all of these — use the tools that match the user's question.
+Use the tools that match the user's question. When explaining a failure, read the real error with `get_job_errors` for each dataset in `state='error'` -- dataset metadata alone does not say why a job failed.
 
 ## Lineage and Provenance
 

@@ -95,8 +95,8 @@ class HistoryAgent(BaseGalaxyAgent):
         async def get_job_errors(ctx: RunContext[GalaxyAgentDependencies], dataset_id: str) -> dict[str, Any]:
             """Get error details (stderr, stdout, exit code) for a failed job.
 
-            IMPORTANT: For any dataset with state='error', call this to get the actual error message.
-            This is required to understand WHY a job failed.
+            Dataset metadata does not say why a job failed; call this for datasets in
+            state='error' to read the actual error output.
             """
             try:
                 return self.ops.get_job_errors(dataset_id)
