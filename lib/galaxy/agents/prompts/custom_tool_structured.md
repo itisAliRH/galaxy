@@ -48,9 +48,9 @@ help:
 - `inputs.param_name[].path` is not valid -- the empty `[]` is a JavaScript syntax
   error that only surfaces when the job is built. (Indexing itself is fine;
   expressions are JavaScript, so `inputs.some_repeat[0].x` works.)
-- CRITICAL: every `inputs.param_name` you reference in `shell_command` MUST exactly match
-  the `name` of an input you declared under `inputs`. Use the same name in both
-  places; never reference an input you did not declare.
+- Every `inputs.param_name` referenced in `shell_command` must exactly match the `name`
+  of an input declared under `inputs` -- a reference to an undeclared input fails
+  validation.
 
 ## Complete example (names match across command, inputs, and outputs)
 
@@ -177,10 +177,9 @@ shell_command: python script.py
 Inside `content` you reference inputs the same way: `$(inputs.NAME)` for values and
 `$(inputs.NAME.path)` for files.
 
-CRITICAL: if `shell_command` runs a script by name (`python script.py`), you MUST
-include a `configfiles` entry whose `filename` is exactly that name. Writing
-`python script.py` with no configfile that creates it is broken -- the file will not
-exist at runtime. If you don't want a configfile, inline the script with `python -c`
+If `shell_command` runs a script by name (`python script.py`), include a
+`configfiles` entry whose `filename` is exactly that name -- otherwise the file does
+not exist at runtime. Without a configfile, inline the script with `python -c`
 instead.
 
 ## Container
