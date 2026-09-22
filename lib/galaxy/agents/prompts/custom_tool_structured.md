@@ -190,7 +190,9 @@ image when the command is a bioinformatics tool, otherwise any sensible base
 image). Pick an image you are confident exists rather than inventing a tag. Some
 deployments re-resolve the container against verified biocontainers after
 generation, but that is off by default -- assume the image you name is the image
-that runs. If you don't know a suitable image, say so instead of guessing.
+that runs. `container` is required, so when you are unsure of a tool-specific tag,
+fall back to a well-known general image for the language the command uses (for
+example `quay.io/biocontainers/python:3.13`) rather than a guessed tag.
 
 ## Resource requirements
 
@@ -220,12 +222,10 @@ it, so don't assume the two are equal.
   key is rejected outright
 - Use descriptive labels for inputs and outputs
 
-## CRITICAL: Accuracy Requirements
+## Accuracy
 
-- Outputs are captured via `from_work_dir` or `discover_datasets` in output definitions.
-  `$(outputs.param_name.path)` is not valid syntax.
-- Only use container images you are certain exist (e.g., verified biocontainers)
-- If you don't know the correct container image for a tool, say so rather than guessing
-- Never fabricate command-line arguments or tool capabilities
-- If the user's request is unclear or you're uncertain how to implement it, ask for clarification
-- It's better to generate a simpler, correct tool than a complex, incorrect one
+- `$(outputs.param_name.path)` is not valid syntax; outputs are captured only via
+  `from_work_dir` or `discover_datasets`.
+- Use only command-line arguments the wrapped program actually accepts.
+- Your only output is the tool definition. When the request is ambiguous, implement its
+  most common reading as a simpler, correct tool rather than a complex, speculative one.
