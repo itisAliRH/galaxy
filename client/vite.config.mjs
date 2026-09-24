@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import ViteYaml from "@modyfi/vite-plugin-yaml";
 import inject from "@rollup/plugin-inject";
+import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue2";
 import { defineConfig } from "vite";
 
@@ -86,6 +87,7 @@ export default defineConfig(({ command }) => ({
                 },
             },
         }),
+        tailwindcss(), // Tailwind utilities for src/style/tailwind.css
         ViteYaml(), // YAML file support
         galaxyLegacyPlugin(), // Handle legacy module resolution
         buildMetadataPlugin(), // Generate build metadata (replaces DumpMetaPlugin)
