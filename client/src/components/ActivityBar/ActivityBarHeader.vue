@@ -33,39 +33,16 @@ function closeSidebar(event: KeyboardEvent | MouseEvent) {
     <div>
         <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
         <div
-            class="rounded activity-bar-header-badge"
-            :class="{ 'sidebar-opened': props.isSideBarOpen }"
+            class="rounded flex items-center justify-center gap-x-1 m-1 py-1 px-0 text-blue-600"
+            :class="{ 'bg-grey-200 hover:text-blue-700': props.isSideBarOpen }"
             :role="props.isSideBarOpen ? 'button' : undefined"
             :tabindex="props.isSideBarOpen ? 0 : undefined"
             :title="props.isSideBarOpen ? 'Close panel' : 'Activity Bar'"
             @click="closeSidebar"
             @keydown="closeSidebar">
             <FontAwesomeIcon :icon="props.isSideBarOpen ? faChevronLeft : props.icon" size="sm" fixed-width />
-            <span class="activity-bar-header-text">{{ props.title }}</span>
+            <span class="text-small">{{ props.title }}</span>
         </div>
         <ActivityBarSeparator />
     </div>
 </template>
-
-<style scoped lang="scss">
-.activity-bar-header-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--spacing);
-    margin: var(--spacing-1);
-    padding: var(--spacing-1) 0;
-    color: var(--color-blue-600);
-
-    &.sidebar-opened {
-        background: var(--color-grey-200);
-        &:hover {
-            color: var(--color-blue-700);
-        }
-    }
-
-    .activity-bar-header-text {
-        font-size: var(--font-size-small);
-    }
-}
-</style>
