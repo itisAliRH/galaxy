@@ -53,7 +53,7 @@ const getStoragePercentageClass = (percentage: number) => {
                 </div>
             </div>
 
-            <div class="flex flex-gapy-1">
+            <div class="flex-gapy-1">
                 <div>
                     You are using
                     <b :class="getStoragePercentageClass(userDiskUsagePercentage)">
