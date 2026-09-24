@@ -1,6 +1,7 @@
 import textwrap
 import zipfile
 from io import BytesIO
+from unittest import SkipTest
 from urllib.parse import quote
 
 import requests
@@ -310,6 +311,14 @@ class TestDatasetsApi(ApiTestCase):
         with self._different_user():
             show_response = self._get(f"datasets/{hda['id']}")
             self._assert_status_code_is(show_response, 403)
+
+    def test_interactive_tools_empty_when_disabled(self, history_id):
+        if self.dataset_populator.get_configuration()["interactivetools_enable"]:
+            raise SkipTest("Skipping test because server has interactive tools enabled")
+        hda = self.dataset_populator.new_dataset(history_id, content="1\t2\n", file_type="tabular", wait=True)
+        response = self._get(f"datasets/{hda['id']}/interactive_tools")
+        self._assert_status_code_is(response, 200)
+        assert response.json() == []
 
     @requires_admin
     def test_admin_can_update_permissions(self, history_id):
