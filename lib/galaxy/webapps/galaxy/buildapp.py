@@ -299,6 +299,7 @@ def app_pair(global_conf, load_app_kwds=None, wsgi_preflight=True, **kwargs):
     webapp.add_client_route("/datasets/{dataset_id}/report")
     webapp.add_client_route("/datasets/{dataset_id}/show_params")
     webapp.add_client_route("/datasets/{dataset_id}/visualize")
+    webapp.add_client_route("/datasets/{dataset_id}/explore")
     webapp.add_client_route("/datasets/{dataset_id}")
     webapp.add_client_route("/display_applications/{path:.*?}")
     webapp.add_client_route("/collection/{collection_id}/edit")
