@@ -180,7 +180,7 @@ function unselectPath(path: string, unselectOnlyAboveDirectories = false, unsele
 
 function selectDirectoryRecursive(record: SelectionItem) {
     // if directory is `selected` or `mixed` unselect everything
-    if (isDirectorySelected(record.id) || selectionModel.value.pathExists(record.url)) {
+    if (isDirectorySelected(record) || selectionModel.value.pathExists(record.url)) {
         unselectPath(record.url, false, record.id);
     } else {
         selectedDirectories.value.push(record);
@@ -234,7 +234,7 @@ function formatRows() {
         }
         // if directory
         else if (!item.isLeaf) {
-            selectionState = getIcon(isDirectorySelected(item.id), item.url);
+            selectionState = getIcon(isDirectorySelected(item), item.url);
         }
         item.selectionState = selectionState;
     }
@@ -243,17 +243,18 @@ function formatRows() {
     checkIfAllSelected();
 }
 
-function isDirectorySelected(directoryId: string): boolean {
-    return selectedDirectories.value.some(({ id }) => id === directoryId);
+// below a selected folder too: recursive listings may skip folders, and unselecting below drops that folder
+function isDirectorySelected(directory: SelectionItem): boolean {
+    return selectedDirectories.value.some(({ id, url }) => id === directory.id || isSubPath(url, directory.url));
 }
 
 /** check if all objects in this folders are selected **/
 function checkIfAllSelected(): boolean {
     const isAllSelected =
         Boolean(items.value.length) &&
-        items.value.every(({ id }) => selectionModel.value.exists(id) || isDirectorySelected(id));
+        items.value.every((item) => selectionModel.value.exists(item.id) || isDirectorySelected(item));
 
-    if (isAllSelected && urlTracker.current.value && !isDirectorySelected(urlTracker.current.value.id)) {
+    if (isAllSelected && urlTracker.current.value && !isDirectorySelected(urlTracker.current.value)) {
         // if all selected, select current folder
         selectedDirectories.value.push(urlTracker.current.value);
     }
@@ -439,7 +440,7 @@ function onSelectAll() {
 
     if (!isUnselectAll && items.value.length !== 0 && withFolders) {
         selectedDirectories.value.push(urlTracker.current.value);
-    } else if (isDirectorySelected(urlTracker.current.value.id)) {
+    } else if (isDirectorySelected(urlTracker.current.value)) {
         selectDirectoryRecursive(urlTracker.current.value);
     }
 

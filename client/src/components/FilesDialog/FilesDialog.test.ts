@@ -230,6 +230,34 @@ describe("FilesDialog, file mode", () => {
         expect(utils.findRenderedDirectory(directoryId).selectionState).toBe(SELECTION_STATES.MIXED);
     });
 
+    it("should show every level of a selected directory as selected when its recursive listing has only files", async () => {
+        // object stores list keys, so a recursive listing need not return the folders in between
+        const filesOnly = directory1RecursiveResponse.filter((entry) => entry.class === "File");
+        server.use(
+            http.get("/api/remote_files", ({ response, query }) => {
+                if (query.get("target") === directoryId && query.get("recursive") === "true") {
+                    return response(200).json(filesOnly, { headers: { total_matches: `${filesOnly.length}` } });
+                }
+                return undefined;
+            }),
+        );
+        await utils.openRootDirectory();
+
+        await utils.clickOn(utils.findRenderedDirectory(directoryId));
+        expect(utils.findRenderedDirectory(directoryId).selectionState).toBe(SELECTION_STATES.SELECTED);
+
+        await utils.openDirectoryById(directoryId);
+        utils.expectAllRenderedItemsSelected();
+        utils.expectSelectAllNotIndeterminate();
+
+        await utils.openDirectoryById(subDirectoryId);
+        utils.expectAllRenderedItemsSelected();
+
+        await utils.navigateBack();
+        await utils.navigateBack();
+        expect(utils.findRenderedDirectory(directoryId).selectionState).toBe(SELECTION_STATES.SELECTED);
+    });
+
     it("should select all on 'toggleSelectAll' event", async () => {
         await utils.openRootDirectory();
         utils.selectAll();
